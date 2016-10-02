@@ -83,13 +83,17 @@ int main(void)
     char read_buffer[DEFAULT_STDIN_BUFFER_SIZE];
     send_message.payload = read_buffer;
 
+    //debug line
+    printf("First msg is %s\n",send_message.payload);
+
     while (printf("%s", prefix), output_str = fgets(read_buffer,
            DEFAULT_STDIN_BUFFER_SIZE, stdin), !feof(stdin)) {
         if (output_str == NULL) {
             log_err("fgets failed.\n");
             break;
         }
-
+    //debug line
+    printf("Subsequent  msg is %s",send_message.payload);
         // Only process input that is greater than 1 character.
         // Ignore things such as new lines.
         // Otherwise, convert to message and send the message and the

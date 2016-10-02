@@ -30,11 +30,19 @@ char* next_token(char** tokenizer, message_status* status) {
  **/
 
 message_status parse_create_tbl(char* create_arguments) {
+//Debug line
+printf("Entering  parse_create_tbl fn \n");
     message_status status = OK_DONE;
     char** create_arguments_index = &create_arguments;
     char* table_name = next_token(create_arguments_index, &status);
     char* db_name = next_token(create_arguments_index, &status);
     char* col_cnt = next_token(create_arguments_index, &status);
+
+//Debug line
+printf("message status is %d \n", status);
+printf("table name inside parse create tbl fn is is %s \n", table_name);
+printf("db name inside parse create tbl fn is is %s \n", db_name);
+printf("column cnt inside parse create tbl fn is is %s \n", col_cnt);
 
     table_name = trim_quotes(table_name);
     // not enough arguments
@@ -50,17 +58,27 @@ message_status parse_create_tbl(char* create_arguments) {
     col_cnt[last_char] = '\0';
 
     // check that the database argument is the current active database
+//Debug line
+printf("Current Database name is %s \n", current_db->name);
+    
     if (strcmp(current_db->name, db_name) != 0) {
         cs165_log(stdout, "query unsupported. Bad db name");
         return QUERY_UNSUPPORTED;
     }
 
+
     int column_cnt = atoi(col_cnt);
+//Debug line
+printf("Column Cnt is %d \n", column_cnt);
     if (column_cnt < 1) {
         return INCORRECT_FORMAT;
     }
     Status create_status;
+//Debug line
+printf("Going to call create table now");
     create_table(current_db, table_name, column_cnt, &create_status);
+//Debug line
+printf("message status code after callinf create table is  %d \n", create_status.code);
     if (create_status.code != OK) {
         cs165_log(stdout, "adding a table failed.");
         return EXECUTION_ERROR;
@@ -82,7 +100,11 @@ message_status parse_create_db(char* create_arguments) {
     } else {
         // create the database with given name
         char* db_name = token;
+//Debug line
+printf("db name before trimming is %s \n", db_name);
         db_name = trim_quotes(db_name);
+//Debug line
+printf("db name after trimming is %s \n", db_name);
         int last_char = strlen(db_name) - 1;
         if (last_char < 0 || db_name[last_char] != ')') {
             return INCORRECT_FORMAT;
@@ -92,6 +114,8 @@ message_status parse_create_db(char* create_arguments) {
         if (token != NULL) {
             return INCORRECT_FORMAT;
         }
+//Debug line
+printf("db name inside parse_create_db before calling add_db fn is %s \n", db_name);
         if (add_db(db_name, true).code == OK) {
             return OK_DONE;
         } else {
@@ -104,6 +128,9 @@ message_status parse_create_db(char* create_arguments) {
  * parse_create parses a create statement and then passes the necessary arguments off to the next function
  **/
 message_status parse_create(char* create_arguments) {
+//Debug Line
+printf("Entering parse_create fn \n");
+
     message_status mes_status;
     char *tokenizer_copy, *to_free;
     tokenizer_copy = to_free = malloc((strlen(create_arguments)+1) * sizeof(char));
@@ -117,8 +144,13 @@ message_status parse_create(char* create_arguments) {
             return INCORRECT_FORMAT;
         } else {
             if (strcmp(token, "db") == 0) {
+//Debug line
+printf("inside parse_create fn where token = db \n");
                 mes_status = parse_create_db(tokenizer_copy);
             } else if (strcmp(token, "tbl") == 0) {
+//Debug line
+printf("inside parse_create fn where token = tbl \n");
+printf("the value of tokenizer copy is %s",tokenizer_copy);
                 mes_status = parse_create_tbl(tokenizer_copy);
             } else {
                 mes_status = UNKNOWN_COMMAND;
@@ -208,6 +240,10 @@ DbOperator* parse_command(char* query_command, message* send_message, int client
 
     if (strncmp(query_command, "create", 6) == 0) {
         query_command += 6;
+
+//Debug line
+printf("inside parse_command fn when create is issued \n");
+
         send_message->status = parse_create(query_command);
         dbo = malloc(sizeof(DbOperator));
         dbo->type = CREATE;

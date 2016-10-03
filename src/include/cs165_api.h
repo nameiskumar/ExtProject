@@ -73,6 +73,8 @@ typedef struct Column {
  * - col_count, the number of columns in the table
  * - col,umns this is the pointer to an array of columns contained in the table.
  * - table_length, the size of the columns in the table.
+ 
+ * - Added columns_size to keep track on number of columns added to the table at given point in time
  **/
 
 typedef struct Table {
@@ -80,6 +82,7 @@ typedef struct Table {
     Column *columns;
     size_t col_count;
     size_t table_length;
+    size_t columns_size;
 } Table;
 
 /**
@@ -246,7 +249,9 @@ Status add_db(const char* db_name, bool new);
 
 Table* create_table(Db* db, const char* name, size_t num_columns, Status *status);
 
-Column* create_column(char *name, Table *table, bool sorted, Status *ret_status);
+//Changed the Column fn declaration to include table name instead of table 
+//Column* create_column(char *name, Table *table, bool sorted, Status *ret_status);
+Column* create_column(const char* column_name, char* table_name, bool sorted, Status *ret_status);
 
 Status shutdown_server();
 Status shutdown_database(Db* db);

@@ -25,6 +25,71 @@ char* next_token(char** tokenizer, message_status* status) {
 }
 
 /**
+ * This method takes in a string representing the arguments to create a column.
+ * It parses those arguments, checks that they are valid, and creates the coulmns.
+ **/
+
+message_status parse_create_col(char* create_arguments) 
+{
+    printf("Entering  parse_create_col fn \n");
+    message_status status = OK_DONE;
+    char** create_arguments_index = &create_arguments;
+    char* column_name = next_token(create_arguments_index, &status);
+    char* db_name = strsep(create_arguments_index,".");
+
+    column_name = trim_quotes(column_name);
+
+//Debug line
+printf("create args is *********%s\n", create_arguments);
+printf("db name is *******%s\n",db_name);
+printf("column name is ***********%s\n", column_name);
+
+    if (strcmp(current_db->name, db_name) != 0) 
+    {
+        cs165_log(stdout, "query unsupported. Bad db name");
+        return QUERY_UNSUPPORTED;
+    }
+
+    if (db_name == NULL)
+    {
+        return INCORRECT_FORMAT;
+    }
+    
+    int last_char = strlen(create_arguments) - 1;
+
+//Debug line
+printf("create args after len  is *********%s\n", create_arguments);
+printf("len of agrs-1 is ********%d\n",last_char);
+printf("the last char of create args is******%c\n", create_arguments[last_char]);
+
+    if (create_arguments[last_char] != ')') 
+    {
+        return INCORRECT_FORMAT;
+    }
+    char* table_name = create_arguments[last_char] = '\0';
+
+//Debug line
+printf("db name is *******%s\n",db_name);
+printf("column name is ***********%s\n", column_name);
+    if (strcmp(current_db->name, db_name) != 0) 
+    {
+        cs165_log(stdout, "query unsupported. Bad db name");
+        return QUERY_UNSUPPORTED;
+    }
+
+    Status create_status;
+    create_column(column_name, table_name,false , &create_status);
+
+     if (create_status.code != OK) 
+     {
+        cs165_log(stdout, "adding a table failed.");
+        return EXECUTION_ERROR;
+     }
+     
+    return status;
+ }
+
+/**
  * This method takes in a string representing the arguments to create a table.
  * It parses those arguments, checks that they are valid, and creates a table.
  **/
@@ -152,7 +217,11 @@ printf("inside parse_create fn where token = db \n");
 printf("inside parse_create fn where token = tbl \n");
 printf("the value of tokenizer copy is %s",tokenizer_copy);
                 mes_status = parse_create_tbl(tokenizer_copy);
-            } else {
+            } 
+             else if (strcmp(token, "col") == 0) {
+                mes_status = parse_create_col(tokenizer_copy);
+            }
+             else {
                 mes_status = UNKNOWN_COMMAND;
             }
         }

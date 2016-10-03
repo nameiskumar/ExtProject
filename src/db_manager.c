@@ -4,6 +4,62 @@
 // In this class, there will always be only one active database at a time
 Db *current_db;
 
+
+Table* lookup(const char* tbl_name)
+{
+    Table* table_ptr = current_db->tables;
+    while(table_ptr->name != tbl_name)
+    {
+        table_ptr++;
+    }
+    if (strcmp(table_ptr->name, tbl_name) != 0)
+    {
+        cs165_log(stdout, "Table name not found");
+        return NULL;
+    }
+    return table_ptr;
+}
+
+Column* create_column(const char* column_name, char* table_name, bool sorted, Status *ret_status)
+{
+    
+    Table* table_ptr = lookup(table_name);
+    
+    if(current_db->tables_capacity == 0)
+    {
+        ret_status->code = ERROR;
+        return NULL;
+    }
+    Column* col_ptr;
+
+    table_ptr->columns_size++;
+
+    if(table_ptr->columns == NULL)
+    {
+        table_ptr->columns = (Column* )(malloc(sizeof(Column) * 1));
+        col_ptr = table_ptr->columns;
+    }
+    else
+    {
+        if(table_ptr->columns_size <= table_ptr->col_count)
+        {
+            table_ptr->columns = realloc(table_ptr->columns,1);
+            col_ptr = table_ptr->columns + table_ptr->columns_size;
+        }
+        else
+        {
+            ret_status->code = ERROR;
+            return NULL;
+        }
+
+        strcpy(col_ptr->name,column_name);
+        col_ptr->data = NULL;
+    }
+    ret_status->code = OK;
+    return col_ptr;
+}
+
+
 Table* create_table(Db* db, const char* name, size_t num_columns, Status *ret_status) 
 {
 //Debug line
@@ -37,7 +93,10 @@ printf("Inside create table fn beyong NULL \n");
     strcpy(table_ptr->name,name);
     table_ptr->col_count = num_columns;
     table_ptr->table_length = MAX_TABLE_LENGTH;
-    
+    table_ptr->columns_size = 0;
+
+    db->tables_capacity--;
+
     ret_status->code=OK;
 
 //Debug line

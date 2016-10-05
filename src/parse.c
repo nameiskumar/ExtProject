@@ -66,11 +66,16 @@ printf("the last char of create args is******%c\n", create_arguments[last_char])
     {
         return INCORRECT_FORMAT;
     }
-    char* table_name = create_arguments[last_char] = '\0';
+    
+    create_arguments[last_char] = '\0';
+    char* table_name = create_arguments;
 
 //Debug line
+printf("create args after last char made null is**** %s\n",create_arguments);
+printf("table name after last char made null is**** %s\n",table_name);
 printf("db name is *******%s\n",db_name);
 printf("column name is ***********%s\n", column_name);
+printf("the value of crrent_db and db_name are %s and %s********",current_db->name,db_name);
     if (strcmp(current_db->name, db_name) != 0) 
     {
         cs165_log(stdout, "query unsupported. Bad db name");
@@ -78,16 +83,59 @@ printf("column name is ***********%s\n", column_name);
     }
 
     Status create_status;
-    create_column(column_name, table_name,false , &create_status);
+//Debug
+printf("table  name before calling create column fn isis ***********%s\n", table_name);
+    Column* c_ptr = create_column(column_name, table_name, false, &create_status);
 
      if (create_status.code != OK) 
      {
         cs165_log(stdout, "adding a table failed.");
         return EXECUTION_ERROR;
      }
-     
+
+//Debug line
+//
+Table* tbl_ptr;
+Column* col_ptr;
+tbl_ptr = current_db->tables;
+col_ptr = tbl_ptr->columns;
+
+if(tbl_ptr->columns_size == 6)
+{
+printf("comparing c_ptr with col_ptr\n");
+printf("c_ptr is %u\n",c_ptr);
+printf("col_ptr is %u\n",col_ptr);
+
+printf("Here start the gist of the db created\n");
+printf("The DB is %s\n",current_db->name);
+printf("The Db->table_size is %d\n",current_db->tables_size);
+printf("The Db->table_capacity is %d\n",current_db->tables_capacity);
+printf("*************************");
+//Table* tbl_ptr;
+//Column* col_ptr;
+
+//tbl_ptr = current_db->tables;
+
+for(int i = 0; i < current_db->tables_size; i++)
+{
+    printf("tables are %s\n",tbl_ptr->name);
+    printf("table->col_count is %d\n",tbl_ptr->col_count);
+    printf("table->table_length is %d\n",tbl_ptr->table_length);
+    printf("table->columns_size is %d\n",tbl_ptr->columns_size);
+    printf("*************************");
+    col_ptr = tbl_ptr->columns;
+
+    for(int j=0; j < tbl_ptr->columns_size; j++)
+    {
+        printf("Columns are %s\n",col_ptr->name);
+        col_ptr++;
+    }
+    printf("*************************");
+    tbl_ptr++;
+}
+}
     return status;
- }
+}
 
 /**
  * This method takes in a string representing the arguments to create a table.

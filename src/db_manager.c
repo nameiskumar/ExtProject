@@ -7,9 +7,21 @@ Db *current_db;
 
 Table* lookup(const char* tbl_name)
 {
+//Debug
+printf("********in lookup fn\n");
+printf("the value of table in lookup fn is ***%s\n", tbl_name);
+
     Table* table_ptr = current_db->tables;
-    while(table_ptr->name != tbl_name)
+    int count = 0;
+//Debug
+printf("inside lookup the value of table_ptr->name and tbl_name is %s%s****** \n", table_ptr->name,tbl_name);
+    while(strcmp(table_ptr->name,tbl_name) != 0)
     {
+        count++;
+
+        if(count == current_db->tables_size)
+            break;
+
         table_ptr++;
     }
     if (strcmp(table_ptr->name, tbl_name) != 0)
@@ -22,17 +34,22 @@ Table* lookup(const char* tbl_name)
 
 Column* create_column(const char* column_name, char* table_name, bool sorted, Status *ret_status)
 {
-    
+//Debug
+printf("*********in create column fn******\n");
+printf("column name inside create col fn is ***********%s\n", column_name);
+printf("table  name inside create column fn is ***********%s\n", table_name);
+
     Table* table_ptr = lookup(table_name);
-    
-    if(current_db->tables_capacity == 0)
+    table_ptr->columns_size++;
+
+    if(table_ptr->columns_size > table_ptr->col_count)
     {
         ret_status->code = ERROR;
         return NULL;
     }
     Column* col_ptr;
 
-    table_ptr->columns_size++;
+    //table_ptr->columns_size++;
 
     if(table_ptr->columns == NULL)
     {
@@ -43,7 +60,7 @@ Column* create_column(const char* column_name, char* table_name, bool sorted, St
     {
         if(table_ptr->columns_size <= table_ptr->col_count)
         {
-            table_ptr->columns = realloc(table_ptr->columns,1);
+            table_ptr->columns = realloc(table_ptr->columns,(sizeof(Column)*table_ptr->columns_size));
             col_ptr = table_ptr->columns + table_ptr->columns_size;
         }
         else
@@ -51,11 +68,18 @@ Column* create_column(const char* column_name, char* table_name, bool sorted, St
             ret_status->code = ERROR;
             return NULL;
         }
-
-        strcpy(col_ptr->name,column_name);
-        col_ptr->data = NULL;
     }
+
+    strcpy(col_ptr->name,column_name);
+    col_ptr->data = NULL;
+    
     ret_status->code = OK;
+
+    printf("$$$$$$$$$$$$$$$$$$$printing col_ptr before returning$$$$$$$$$$\n");
+    printf("col_ptr is %u\n",col_ptr);
+    printf("$$$$$$$$$$$$$$$$$$$printing col_ptr->name$$$$$$$$$$$$$$$$%s\n",col_ptr->name);
+    printf("$$$$$$$$$$$$$$$$$$$printing col_name$$$$$$$$$$$$$$$$%s\n",column_name);
+
     return col_ptr;
 }
 
@@ -86,7 +110,7 @@ printf("Inside create table fn beyong NULL \n");
 
     else
     {
-        db->tables = (Table *)realloc(db->tables,1);
+        db->tables = (Table *)realloc(db->tables,sizeof(Table)*db->tables_size);
         table_ptr = db->tables+db->tables_size;
     }
 
@@ -94,6 +118,7 @@ printf("Inside create table fn beyong NULL \n");
     table_ptr->col_count = num_columns;
     table_ptr->table_length = MAX_TABLE_LENGTH;
     table_ptr->columns_size = 0;
+    table_ptr->columns = NULL;
 
     db->tables_capacity--;
 

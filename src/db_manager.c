@@ -1,6 +1,6 @@
 #include "cs165_api.h"
 #define MAX_TABLE_CAP 10
-#define MAX_TABLE_LENGTH 20
+//#define MAX_TABLE_LENGTH 2
 // In this class, there will always be only one active database at a time
 Db *current_db;
 
@@ -61,7 +61,7 @@ printf("table  name inside create column fn is ***********%s\n", table_name);
         if(table_ptr->columns_size <= table_ptr->col_count)
         {
             table_ptr->columns = realloc(table_ptr->columns,(sizeof(Column)*table_ptr->columns_size));
-            col_ptr = table_ptr->columns + table_ptr->columns_size;
+            col_ptr = table_ptr->columns + (table_ptr->columns_size - 1);
         }
         else
         {
@@ -111,13 +111,14 @@ printf("Inside create table fn beyong NULL \n");
     else
     {
         db->tables = (Table *)realloc(db->tables,sizeof(Table)*db->tables_size);
-        table_ptr = db->tables+db->tables_size;
+        table_ptr = db->tables+(db->tables_size - 1);
     }
 
     strcpy(table_ptr->name,name);
     table_ptr->col_count = num_columns;
     table_ptr->table_length = MAX_TABLE_LENGTH;
     table_ptr->columns_size = 0;
+    table_ptr->data_pos = 0;
     table_ptr->columns = NULL;
 
     db->tables_capacity--;

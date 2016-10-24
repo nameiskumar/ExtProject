@@ -28,10 +28,12 @@ SOFTWARE.
 #include <stdlib.h>
 #include <stdbool.h>
 #include <stdio.h>
+#include "message.h"
 
 // Limits the size of a name in our database to 64 characters
 #define MAX_SIZE_NAME 64
 #define HANDLE_MAX_SIZE 64
+#define MAX_TABLE_LENGTH 1024
 
 /**
  * EXTRA
@@ -75,6 +77,7 @@ typedef struct Column {
  * - table_length, the size of the columns in the table.
  
  * - Added columns_size to keep track on number of columns added to the table at given point in time
+ * - Added data_pos to keep track of the data position (aka row id) on the table at any given time
  **/
 
 typedef struct Table {
@@ -83,6 +86,7 @@ typedef struct Table {
     size_t col_count;
     size_t table_length;
     size_t columns_size;
+    int data_pos;
 } Table;
 
 /**
@@ -197,6 +201,7 @@ typedef enum OperatorType {
     CREATE,
     INSERT,
     OPEN,
+    LOAD
 } OperatorType;
 /*
  * necessary fields for insertion
@@ -252,6 +257,8 @@ Table* create_table(Db* db, const char* name, size_t num_columns, Status *status
 //Changed the Column fn declaration to include table name instead of table 
 //Column* create_column(char *name, Table *table, bool sorted, Status *ret_status);
 Column* create_column(const char* column_name, char* table_name, bool sorted, Status *ret_status);
+
+DbOperator* parse_load(char* query_command, message* send_message);
 
 Status shutdown_server();
 Status shutdown_database(Db* db);

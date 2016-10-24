@@ -38,20 +38,93 @@
 char* execute_DbOperator(DbOperator* query) 
 {
     //printf("%d",query->client_fd);
-    //debug line
-    printf("The value in the query is %d\n", query);
-    printf("inside DBOperator-start\n");
-    printf("The query type is %d\n", query->type);
-    printf("inside DBOperator-end\n");
+//debug line
+    if(query == NULL)
+    {
+        return "This is either a comment or an unsupported query";
+    }
 
+printf("The value in the query is %d\n", query);
+printf("inside DBOperator-start\n");
+printf("The query type is %d\n", query->type);
+printf("inside DBOperator-end\n");
+
+    Table* table_ptr;
+    Column* col_ptr;
+    message_status status;
+    
     switch(query->type)
     {
         case 0 :
             return "This is a Create query! Cant return results on this";
         
         case 1 :
-            return "This is a Insert  query! Cant return results on this";
+//Debug
+for (int i=0;i<(current_db->tables)->col_count;i++)
+printf("The values to be inserted is %d\n", query->operator_fields.insert_operator.values[i]);
+//printf("%d\n", query->operator_fields.insert_operator.values[1]);           
+           
+            col_ptr = (query->operator_fields.insert_operator.table)->columns;
+            table_ptr = query->operator_fields.insert_operator.table;
 
+            if(table_ptr->data_pos == 0)
+            {
+                for(int i = 0; i < table_ptr->col_count; i++)
+                {
+                    col_ptr->data = (int* )malloc(sizeof(int)*table_ptr->table_length);
+                    col_ptr++;
+                }
+            }
+
+            if(table_ptr->data_pos >= table_ptr->table_length)
+            {
+                table_ptr->table_length = table_ptr->table_length + MAX_TABLE_LENGTH;
+
+                for (int i = 0; i < table_ptr->col_count; i++)
+                {
+                    status = TABLE_FULL;
+                    void *temp = (int* )realloc((col_ptr->data),sizeof(int)*MAX_TABLE_LENGTH);
+                    if(temp != NULL)
+                    {
+                        (col_ptr->data) = temp;
+                    }
+                    else
+                    {
+                        printf("could not reallocate and value of temp is %u\n",temp);
+                    }
+                    col_ptr++;
+                }
+            }
+
+            col_ptr = table_ptr->columns;
+            
+            for(int j = 0; j < table_ptr->col_count; j++)
+            {
+                (col_ptr)->data[table_ptr->data_pos] = query->operator_fields.insert_operator.values[j];
+                col_ptr++;
+
+//Debug
+printf("data position value %d \n", (table_ptr->data_pos));
+//printf("value inserted at this point is %d \n", (col_ptr)->data[table_ptr->data_pos]);
+            }
+
+            (table_ptr->data_pos)++;
+//debug
+printf("data position value after increment %d \n", (table_ptr->data_pos));
+Column *column_ptr = (current_db->tables)->columns;
+
+//Debug printing
+for (int j=0;j<(current_db->tables)->col_count;j++)
+{
+for (int i=0;i<(current_db->tables)->data_pos;i++)
+{
+printf("Inserted values are %d\n",(column_ptr)->data[i]);
+}
+column_ptr++;
+}
+
+            return "Data inserted successfully";
+            
         case 2 :
             printf("This is select query and results will be returned");
             free(query);
@@ -109,10 +182,12 @@ void handle_client(int client_socket) {
             // 1. Parse command
             DbOperator* query = parse_command(recv_message.payload, &send_message, client_socket, client_context);
 
-            //Debug line
-            printf("query is %d\n", query);
-            printf("CLient-fd value in the query is %d\n", query->client_fd);
-
+//Debug line
+if(query != NULL)
+{
+printf("query is %d\n", query);
+printf("CLient-fd value in the query is %d\n", query->client_fd);
+}
             // 2. Handle request
             char* result = execute_DbOperator(query);
             send_message.length = strlen(result);

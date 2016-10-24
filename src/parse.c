@@ -8,6 +8,7 @@
 #include "parse.h"
 #include "utils.h"
 #include "client_context.h"
+#include "message.h"
 
 /**
  * Takes a pointer to a string.
@@ -84,7 +85,7 @@ printf("the value of crrent_db and db_name are %s and %s********",current_db->na
 
     Status create_status;
 //Debug
-printf("table  name before calling create column fn isis ***********%s\n", table_name);
+printf("table  name before calling create column fn is ***********%s\n", table_name);
     Column* c_ptr = create_column(column_name, table_name, false, &create_status);
 
      if (create_status.code != OK) 
@@ -100,7 +101,7 @@ Column* col_ptr;
 tbl_ptr = current_db->tables;
 col_ptr = tbl_ptr->columns;
 
-if(tbl_ptr->columns_size == 6)
+if(tbl_ptr->columns_size == tbl_ptr->col_count)
 {
 printf("comparing c_ptr with col_ptr\n");
 printf("c_ptr is %u\n",c_ptr);
@@ -110,7 +111,7 @@ printf("Here start the gist of the db created\n");
 printf("The DB is %s\n",current_db->name);
 printf("The Db->table_size is %d\n",current_db->tables_size);
 printf("The Db->table_capacity is %d\n",current_db->tables_capacity);
-printf("*************************");
+printf("*************************\n");
 //Table* tbl_ptr;
 //Column* col_ptr;
 
@@ -122,7 +123,7 @@ for(int i = 0; i < current_db->tables_size; i++)
     printf("table->col_count is %d\n",tbl_ptr->col_count);
     printf("table->table_length is %d\n",tbl_ptr->table_length);
     printf("table->columns_size is %d\n",tbl_ptr->columns_size);
-    printf("*************************");
+    printf("*************************\n");
     col_ptr = tbl_ptr->columns;
 
     for(int j=0; j < tbl_ptr->columns_size; j++)
@@ -130,7 +131,7 @@ for(int i = 0; i < current_db->tables_size; i++)
         printf("Columns are %s\n",col_ptr->name);
         col_ptr++;
     }
-    printf("*************************");
+    printf("*************************\n");
     tbl_ptr++;
 }
 }
@@ -292,19 +293,30 @@ DbOperator* parse_insert(char* query_command, message* send_message) {
         query_command++;
         char** command_index = &query_command;
         char* table_name = next_token(command_index, &send_message->status);
+        char** table_name_index = &table_name;
+        char* db_name  = strsep(table_name_index, ".");
+
+        table_name = trim_quotes(table_name);
+//Debug line
+printf("%s\n",table_name);
+
+        //char* db_name = strsep(create_arguments_index,".");
+
         if (send_message->status == INCORRECT_FORMAT) {
             return NULL;
         }
         // lookup the table and make sure it exists. 
-        Table* insert_table = lookup_table(table_name);
+        Table* insert_table = lookup(table_name);
         if (insert_table == NULL) {
             send_message->status = OBJECT_NOT_FOUND;
             return NULL;
         }
+        Column* col = insert_table->columns;
         DbOperator* dbo = malloc(sizeof(DbOperator));
         dbo->type = INSERT;
         dbo->operator_fields.insert_operator.table = insert_table;
         dbo->operator_fields.insert_operator.values = malloc(sizeof(int) * insert_table->col_count);
+        
         while ((token = strsep(command_index, ",")) != NULL) {
             // NOT ERROR CHECKED. COULD WRITE YOUR OWN ATOI. (ATOI RETURNS 0 ON NON-INTEGER STRING)
             int insert_val = atoi(token);
@@ -323,6 +335,49 @@ DbOperator* parse_insert(char* query_command, message* send_message) {
         return NULL;
     }
 }
+/**
+ * parse_load takes as input the send_message from the client and then
+ * parses it into the appropriate query. Stores into send_message the
+ * status to send back.
+ * Returns a db_operator.
+ **/
+DbOperator* parse_load(char* query_command, message* send_message)
+{
+    if(strncmp(query_command, "(", 1) == 0)
+    {   
+        query_command++;
+    }
+    
+    query_command = trim_newline(query_command);
+    query_command = trim_whitespace(query_command);
+
+    int last_char = strlen(query_command) - 1;
+   
+    printf("Last char is %c \n", query_command[last_char]);
+
+    if (query_command[last_char] != ')')
+    {
+        printf(")INCORRECT_FORMAT");
+    }
+    
+    query_command[last_char] = '\0';
+//char* load_file_copy = strsep(table_name_index, "/");
+//Debug 
+printf("%s\n", query_command);
+
+    char* str = trim_quotes(query_command);
+//debug
+printf("%s\n", query_command);
+    
+    
+    DbOperator* dbo = malloc(sizeof(DbOperator));
+    dbo->type = LOAD;
+    
+    //load_File(query_command);
+    //Will code later
+
+    return dbo;
+}
 
 /**
  * parse_command takes as input the send_message from the client and then
@@ -337,6 +392,14 @@ DbOperator* parse_command(char* query_command, message* send_message, int client
         send_message->status = OK_DONE;
         // COMMENT LINE! 
         return NULL;
+    }
+
+    if (strncmp(query_command, "load", 4) == 0)
+    {
+        send_message->status = OK_DONE;
+        query_command += 4;
+        //printf("%s\n", query_command);
+        dbo = parse_load(query_command, send_message);
     }
 
     char *equals_pointer = strchr(query_command, '=');

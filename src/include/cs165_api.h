@@ -201,7 +201,9 @@ typedef enum OperatorType {
     CREATE,
     INSERT,
     OPEN,
-    LOAD
+    LOAD,
+    SELECT,
+    FETCH
 } OperatorType;
 /*
  * necessary fields for insertion
@@ -259,6 +261,8 @@ Table* create_table(Db* db, const char* name, size_t num_columns, Status *status
 Column* create_column(const char* column_name, char* table_name, bool sorted, Status *ret_status);
 
 DbOperator* parse_load(char* query_command, message* send_message);
+
+DbOperator* parse_select(char* query_command, char* handle, message* send_message);
 
 Status shutdown_server();
 Status shutdown_database(Db* db);

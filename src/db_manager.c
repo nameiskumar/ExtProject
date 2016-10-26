@@ -32,6 +32,42 @@ printf("inside lookup the value of table_ptr->name and tbl_name is %s%s****** \n
     return table_ptr;
 }
 
+Column* col_lookup(const char* col_name)
+{
+    Column* col_ptr = (current_db->tables)->columns;
+    int count = 0;
+
+    while(strcmp(col_ptr->name, col_name) != 0)
+    {
+        count++;
+
+        if(count == (current_db->tables)->table_length)
+            break;
+
+        col_ptr++;
+    }
+
+    
+    if(strcmp(col_ptr->name, col_name) !=0)
+    {
+        cs165_log(stdout, "Table name not found");
+        return NULL;
+    }
+
+    return col_ptr;
+
+}
+
+Result* select_results(char* db_name, char* table_name, char* col_name, char* lower_bound, char* upper_bound)
+{
+
+    printf("the lower bd is %s \n", lower_bound);
+    printf("the upper bd is %s \n", upper_bound);
+    //printf("the db obj is %s \n", db_object);
+}
+
+
+
 Column* create_column(const char* column_name, char* table_name, bool sorted, Status *ret_status)
 {
 //Debug

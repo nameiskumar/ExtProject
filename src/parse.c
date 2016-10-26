@@ -286,10 +286,12 @@ printf("the value of tokenizer copy is %s",tokenizer_copy);
  * then passes these arguments to a database function to insert a row.
  **/
 
-DbOperator* parse_insert(char* query_command, message* send_message) {
+DbOperator* parse_insert(char* query_command, message* send_message) 
+{
     unsigned int columns_inserted = 0;
     char* token = NULL;
-    if (strncmp(query_command, "(", 1) == 0) {
+    if (strncmp(query_command, "(", 1) == 0) 
+    {
         query_command++;
         char** command_index = &query_command;
         char* table_name = next_token(command_index, &send_message->status);
@@ -302,12 +304,14 @@ printf("%s\n",table_name);
 
         //char* db_name = strsep(create_arguments_index,".");
 
-        if (send_message->status == INCORRECT_FORMAT) {
+        if (send_message->status == INCORRECT_FORMAT) 
+        {
             return NULL;
         }
         // lookup the table and make sure it exists. 
         Table* insert_table = lookup(table_name);
-        if (insert_table == NULL) {
+        if (insert_table == NULL) 
+        {
             send_message->status = OBJECT_NOT_FOUND;
             return NULL;
         }
@@ -317,20 +321,24 @@ printf("%s\n",table_name);
         dbo->operator_fields.insert_operator.table = insert_table;
         dbo->operator_fields.insert_operator.values = malloc(sizeof(int) * insert_table->col_count);
         
-        while ((token = strsep(command_index, ",")) != NULL) {
+        while ((token = strsep(command_index, ",")) != NULL) 
+        {
             // NOT ERROR CHECKED. COULD WRITE YOUR OWN ATOI. (ATOI RETURNS 0 ON NON-INTEGER STRING)
             int insert_val = atoi(token);
             dbo->operator_fields.insert_operator.values[columns_inserted] = insert_val;
             columns_inserted++;
         }
         // check that we received the correct number of input values
-        if (columns_inserted != insert_table->col_count) {
+        if (columns_inserted != insert_table->col_count) 
+        {
             send_message->status = INCORRECT_FORMAT;
             free (dbo);
             return NULL;
         } 
         return dbo;
-    } else {
+    } 
+    else 
+    {
         send_message->status = UNKNOWN_COMMAND;
         return NULL;
     }
@@ -365,7 +373,7 @@ DbOperator* parse_load(char* query_command, message* send_message)
 //Debug 
 printf("%s\n", query_command);
 
-    char* str = trim_quotes(query_command);
+    query_command = trim_quotes(query_command);
 //debug
 printf("%s\n", query_command);
     
@@ -379,16 +387,96 @@ printf("%s\n", query_command);
     return dbo;
 }
 
+
+/**
+ * parse_select takes as input the send_message from the client and then
+ * parses it into the appropriate query. Stores into send_message the
+ * status to send back.
+ * Returns a db_operator.
+ **/
+
+DbOperator* parse_select(char* query_command, char* handle, message* send_message)
+{
+
+    if(strncmp(query_command, "(", 1) == 0)
+    {
+        query_command++;
+    }
+
+    query_command = trim_newline(query_command);
+    query_command = trim_whitespace(query_command);
+
+    int last_char = strlen(query_command) - 1;
+
+//debug
+printf("Last char is %c \n", query_command[last_char]);
+
+    if (query_command[last_char] != ')')
+    {
+        printf("INCORRECT_FORMAT");
+    }
+    
+    query_command[last_char] = '\0';
+//char* load_file_copy = strsep(table_name_index, "/");
+//Debug 
+printf("%s\n", query_command);
+
+    char** command_index = &query_command;
+    char* db_object = next_token(command_index, &send_message->status);
+    
+    //Range extraction
+    command_index = &query_command;
+    char* lower_bound = (next_token(command_index, &send_message->status));
+    char* upper_bound = (query_command);
+
+//debug
+printf("the lower bd is %s \n", lower_bound);
+printf("the upper bd is %s \n", upper_bound);
+printf("the db obj is %s \n", db_object);
+
+    char** db_object_index = &db_object;
+    char* db_name = strsep(db_object_index, ".");
+
+    db_object_index = &db_object;
+    
+    char* table_name = strsep(db_object_index, ".");
+    char* col_name = db_object;
+
+//debug
+printf("db name is %s \n", db_name);
+printf("the table name is %s \n", table_name);
+printf("the col_name is %s \n", col_name);
+
+
+    DbOperator* dbo = malloc(sizeof(DbOperator));
+    dbo->type = SELECT;
+    dbo->context = malloc(sizeof(ClientContext));
+    (dbo->context)->chandles_in_use = 0;
+    (dbo->context)->chandle_slots = 10;
+
+//debug
+Column* col_ptr = col_lookup(col_name);
+
+//    Result* res = select_results(db_name, table_name, col_name, lower_bound, upper_bound);
+
+return dbo;
+
+}
+
+
 /**
  * parse_command takes as input the send_message from the client and then
  * parses it into the appropriate query. Stores into send_message the
  * status to send back.
  * Returns a db_operator.
  **/
-DbOperator* parse_command(char* query_command, message* send_message, int client_socket, ClientContext* context) {
+
+DbOperator* parse_command(char* query_command, message* send_message, int client_socket, ClientContext* context) 
+{
     DbOperator *dbo = NULL; // = malloc(sizeof(DbOperator)); // calloc?
 
-    if (strncmp(query_command, "--", 2) == 0) {
+    if (strncmp(query_command, "--", 2) == 0) 
+    {
         send_message->status = OK_DONE;
         // COMMENT LINE! 
         return NULL;
@@ -404,12 +492,27 @@ DbOperator* parse_command(char* query_command, message* send_message, int client
 
     char *equals_pointer = strchr(query_command, '=');
     char *handle = query_command;
-    if (equals_pointer != NULL) {
+  
+    if (equals_pointer != NULL) 
+    {
         // handle file table
         *equals_pointer = '\0';
         cs165_log(stdout, "FILE HANDLE: %s\n", handle);
+
         query_command = ++equals_pointer;
-    } else {
+        //query_command = trim_newline(query_command);
+    }
+    if(strncmp(query_command, "select", 6) == 0)
+    {
+        query_command += 6;
+        dbo = parse_select(query_command, handle, send_message);
+//debug
+printf("the variable is %s \n", handle);
+//printf("the query is  %s \n", query_command);
+    } 
+    
+    else 
+    {
         handle = NULL;
     }
 
@@ -418,7 +521,8 @@ DbOperator* parse_command(char* query_command, message* send_message, int client
     send_message->status = OK_WAIT_FOR_RESPONSE;
     query_command = trim_whitespace(query_command);
 
-    if (strncmp(query_command, "create", 6) == 0) {
+    if (strncmp(query_command, "create", 6) == 0) 
+    {
         query_command += 6;
 
 //Debug line
@@ -427,11 +531,16 @@ printf("inside parse_command fn when create is issued \n");
         send_message->status = parse_create(query_command);
         dbo = malloc(sizeof(DbOperator));
         dbo->type = CREATE;
-    } else if (strncmp(query_command, "relational_insert", 17) == 0) {
+    } 
+    
+    else if (strncmp(query_command, "relational_insert", 17) == 0) 
+    {
         query_command += 17;
         dbo = parse_insert(query_command, send_message);
     }
-    if (dbo == NULL) {
+    
+    if (dbo == NULL) 
+    {
         return dbo;
     }
     

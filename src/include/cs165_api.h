@@ -29,6 +29,10 @@ SOFTWARE.
 #include <stdbool.h>
 #include <stdio.h>
 #include "message.h"
+//#include "common.h"
+//#include "parse.h"
+//#include "utils.h"
+//#include "message.h"
 
 // Limits the size of a name in our database to 64 characters
 #define MAX_SIZE_NAME 64
@@ -138,7 +142,8 @@ typedef enum ComparatorType {
 typedef struct Result {
     size_t num_tuples;
     DataType data_type;
-    void *payload;
+    //void *payload;
+    int* payload;
 } Result;
 
 /*
@@ -262,7 +267,9 @@ Column* create_column(const char* column_name, char* table_name, bool sorted, St
 
 DbOperator* parse_load(char* query_command, message* send_message);
 
-DbOperator* parse_select(char* query_command, char* handle, message* send_message);
+DbOperator* parse_select(char* query_command, char* handle, int client_socket, message* send_message);
+
+Result* select_results(char* db_name, char* table_name, char* col_name, char* lower_bound, char* upper_bound);
 
 Status shutdown_server();
 Status shutdown_database(Db* db);

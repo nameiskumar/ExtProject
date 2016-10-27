@@ -35,6 +35,7 @@
  * This should be replaced in your implementation (and its implementation possibly moved to a different file).
  * It is currently here so that you can verify that your server and client can send messages.
  **/
+
 char* execute_DbOperator(DbOperator* query) 
 {
     //printf("%d",query->client_fd);
@@ -135,6 +136,7 @@ column_ptr++;
 }
 
 
+
 /**
  * handle_client(client_socket)
  * This is the execution routine after a client has connected.
@@ -167,8 +169,8 @@ void handle_client(int client_socket) {
             done = 1;
         }
 
-        //debug line
-        //printf("First received msg is %s", recv_message.payload);
+//debug line
+//printf("First received msg is %s", recv_message.payload);
 
         if (!done) {
             char recv_buffer[recv_message.length];
@@ -176,8 +178,8 @@ void handle_client(int client_socket) {
             recv_message.payload = recv_buffer;
             recv_message.payload[recv_message.length] = '\0';
 
-            //Debug line
-            printf("Subsequent received msg at the server is %s", recv_message.payload);
+//Debug line
+printf("Second received msg at the server is %s", recv_message.payload);
 
             // 1. Parse command
             DbOperator* query = parse_command(recv_message.payload, &send_message, client_socket, client_context);

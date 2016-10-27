@@ -395,7 +395,7 @@ printf("%s\n", query_command);
  * Returns a db_operator.
  **/
 
-DbOperator* parse_select(char* query_command, char* handle, message* send_message)
+DbOperator* parse_select(char* query_command, char* handle, int client_socket, message* send_message)
 {
 
     if(strncmp(query_command, "(", 1) == 0)
@@ -457,7 +457,7 @@ printf("the col_name is %s \n", col_name);
 //debug
 Column* col_ptr = col_lookup(col_name);
 
-//    Result* res = select_results(db_name, table_name, col_name, lower_bound, upper_bound);
+    Result* res = select_results(db_name, table_name, col_name, lower_bound, upper_bound);
 
 return dbo;
 
@@ -505,7 +505,7 @@ DbOperator* parse_command(char* query_command, message* send_message, int client
     if(strncmp(query_command, "select", 6) == 0)
     {
         query_command += 6;
-        dbo = parse_select(query_command, handle, send_message);
+        dbo = parse_select(query_command, handle, client_socket, send_message);
 //debug
 printf("the variable is %s \n", handle);
 //printf("the query is  %s \n", query_command);

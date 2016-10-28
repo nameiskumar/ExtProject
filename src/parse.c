@@ -518,7 +518,7 @@ printf("the variable is %s \n", handle);
 
     cs165_log(stdout, "QUERY: %s\n", query_command);
 
-    send_message->status = OK_WAIT_FOR_RESPONSE;
+    send_message->status = OK_DONE;
     query_command = trim_whitespace(query_command);
 
     if (strncmp(query_command, "create", 6) == 0) 

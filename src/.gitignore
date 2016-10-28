@@ -1,0 +1,4 @@
+**/*.o
+src/client
+src/server
+src/.deps/

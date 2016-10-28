@@ -35,7 +35,7 @@
  * This should be replaced in your implementation (and its implementation possibly moved to a different file).
  * It is currently here so that you can verify that your server and client can send messages.
  **/
-
+/*
 char* execute_DbOperator(DbOperator* query) 
 {
     //printf("%d",query->client_fd);
@@ -135,7 +135,7 @@ column_ptr++;
     }
 }
 
-
+*/
 
 /**
  * handle_client(client_socket)
@@ -172,17 +172,29 @@ void handle_client(int client_socket) {
 //debug line
 //printf("First received msg is %s", recv_message.payload);
 
+//done = 0;
+
         if (!done) {
             char recv_buffer[recv_message.length];
             length = recv(client_socket, recv_buffer, recv_message.length,0);
             recv_message.payload = recv_buffer;
             recv_message.payload[recv_message.length] = '\0';
-
+            
+            char* result;
 //Debug line
 printf("Second received msg at the server is %s", recv_message.payload);
 
-            // 1. Parse command
-            DbOperator* query = parse_command(recv_message.payload, &send_message, client_socket, client_context);
+            if(strncmp(recv_message.payload, "load", 4) == 0)
+            {
+                result = "Loading......";
+            }
+
+            else
+            {
+
+
+                // 1. Parse command
+                DbOperator* query = parse_command(recv_message.payload, &send_message, client_socket, client_context);
 
 //Debug line
 if(query != NULL)
@@ -190,8 +202,10 @@ if(query != NULL)
 printf("query is %d\n", query);
 printf("CLient-fd value in the query is %d\n", query->client_fd);
 }
-            // 2. Handle request
-            char* result = execute_DbOperator(query);
+                // 2. Handle request
+                result = execute_DbOperator(query);
+            
+            }
             send_message.length = strlen(result);
 
             // 3. Send status of the received message (OK, UNKNOWN_QUERY, etc)

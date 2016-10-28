@@ -65,7 +65,7 @@ Column* col_lookup(const char* col_name)
  * It is currently here so that you can verify that your server and client can send messages.
  **/
 
-/*char* execute_DbOperator(DbOperator* query) 
+char* execute_DbOperator(DbOperator* query) 
 {
     //printf("%d",query->client_fd);
 //debug line
@@ -164,7 +164,7 @@ column_ptr++;
     }
 }
 
-*/
+
 
 //end of execute DB
 

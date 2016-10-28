@@ -24,6 +24,8 @@
 #include "message.h"
 #include "utils.h"
 
+#include "string.h"
+
 #define DEFAULT_STDIN_BUFFER_SIZE 1024
 
 /**
@@ -56,6 +58,57 @@ int connect_client() {
     log_info("Client connected at socket: %d.\n", client_socket);
     return client_socket;
 }
+
+//send file code
+//
+//
+
+void send_file_to_server(int client_socket)
+{
+    char* fs_name = "../project_tests/data1.csv";
+    char read_buffer[DEFAULT_STDIN_BUFFER_SIZE];
+    message send_message;
+    char *output_str = NULL;
+
+    printf("[Client] Sending %s to the Server... ", fs_name);
+    
+    FILE *fs = fopen(fs_name, "r");
+    
+    if(fs == NULL)
+    {
+        printf("ERROR: File %s not found.\n", fs_name);
+        exit(1);
+    }
+    
+    bzero(read_buffer, DEFAULT_STDIN_BUFFER_SIZE);
+   
+    send_message.payload = read_buffer;
+    
+    while (output_str = fgets(read_buffer, DEFAULT_STDIN_BUFFER_SIZE, fs), !feof(fs))
+    {
+
+        send_message.length = strlen(read_buffer);
+        if (send_message.length > 1) 
+        {
+            // Send the message_header, which tells server payload size
+            if (send(client_socket, &(send_message), sizeof(message), 0) == -1) 
+            {
+                log_err("Failed to send message header.");
+                exit(1);
+            }
+
+            // Send the payload (query) to server
+            if (send(client_socket, send_message.payload, send_message.length, 0) == -1) 
+            {
+                log_err("Failed to send query payload.");
+                exit(1);
+            }
+
+            bzero(read_buffer, DEFAULT_STDIN_BUFFER_SIZE);
+        }
+    }
+}
+//
 
 int main(void)
 {
@@ -120,6 +173,11 @@ int main(void)
                 exit(1);
             }
 
+            if (strncmp(send_message.payload, "load", 4) == 0)
+            {
+                send_file_to_server(client_socket);
+            }
+
             // Always wait for server response (even if it is just an OK message)
             if ((len = recv(client_socket, &(recv_message), sizeof(message), 0)) > 0) 
             {
@@ -147,10 +205,12 @@ int main(void)
                 {
 		            log_info("Server closed connection\n");
 		        }
-                exit(1);
+                   exit(1);
             }
         }
     }
-    close(client_socket);
+//    close(client_socket);
+//debug
+while(1){}
     return 0;
 }

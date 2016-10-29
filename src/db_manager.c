@@ -85,10 +85,10 @@ printf("inside DBOperator-end\n");
     
     switch(query->type)
     {
-        case 0 :
+        case 0 : //CREATE Queries
             return "This is a Create query! Cant return results on this";
         
-        case 1 :
+        case 1 : //INSERT QUERIES
 //Debug
 for (int i=0;i<(current_db->tables)->col_count;i++)
 printf("The values to be inserted is %d\n", query->operator_fields.insert_operator.values[i]);
@@ -155,11 +155,15 @@ column_ptr++;
 
             return "Data inserted successfully";
             
-        case 2 :
-            printf("This is select query and results will be returned");
+        case 2 : //SELECTS
+            printf("This is select query and results will be returned \n");
             free(query);
 
-        default :
+        case 3 : //LOADS
+            printf("This is a load  query and results will NOT  be returned \n");
+            free(query);
+
+        default : //EVERYTHING ELSE
             return "Hello 165";
     }
 }
@@ -341,3 +345,12 @@ printf("Name of the DB in current_db pointer is  %s\n", current_db->name);
 	ret_status.code = OK;
 	return ret_status;
 }
+
+void load_insert(DbOperator* dbo, message* send_message, char* lf_ptr)
+{
+    struct Status ret_status;
+
+    ret_status.code = OK;
+    return ret_status;
+}
+

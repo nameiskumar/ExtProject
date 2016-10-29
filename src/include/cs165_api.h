@@ -66,6 +66,14 @@ typedef struct Column {
     //bool clustered;
 } Column;
 
+//new struct to store data streaming from clients
+typedef struct LoadFile
+{
+    char name[MAX_SIZE_NAME];
+    char* element;
+    int socket_no;
+    int number_of_elements;
+} LoadFile;
 
 /**
  * table
@@ -217,18 +225,31 @@ typedef struct InsertOperator {
     Table* table;
     int* values;
 } InsertOperator;
+
+/*
+ * Added LoadOperator struct
+ */
+
+typedef struct LoadOperator 
+{
+    char* file_content;
+} LoadOperator;
+
 /*
  * necessary fields for insertion
  */
+
 typedef struct OpenOperator {
     char* db_name;
 } OpenOperator;
 /*
  * union type holding the fields of any operator
+ * Added LoadOperator for file loading
  */
 typedef union OperatorFields {
     InsertOperator insert_operator;
     OpenOperator open_operator;
+    LoadOperator load_operator;
 } OperatorFields;
 /*
  * DbOperator holds the following fields:

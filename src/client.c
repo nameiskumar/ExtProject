@@ -1,4 +1,6 @@
 #define _XOPEN_SOURCE
+#define _BSD_SOURCE
+
 /**
  * client.c
  *  CS165 Fall 2015
@@ -15,6 +17,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <stdio.h>
+#include <stddef.h>
 
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -24,9 +27,11 @@
 #include "message.h"
 #include "utils.h"
 
-#include "string.h"
+#include "cs165_api.h"
+#include "parse.h"
 
-#define DEFAULT_STDIN_BUFFER_SIZE 1024
+#define DEFAULT_STDIN_BUFFER_SIZE 2048
+//Db *current_db;
 
 /**
  * connect_client()
@@ -35,6 +40,28 @@
  * Returns a valid client socket fd on success, else -1 on failure.
  *
  **/
+
+char* next_token(char** tokenizer, message_status* status) 
+{
+    char* token = strsep(tokenizer, ",");
+    if (token == NULL) 
+    {
+        *status= INCORRECT_FORMAT;
+    }
+    return token;
+}
+
+char* next_dot_token(char** tokenizer, message_status* status) 
+{
+    char* token = strsep(tokenizer, ".");
+    if (token == NULL) 
+    {
+        *status= INCORRECT_FORMAT;
+    }
+    return token;
+}
+
+
 int connect_client() {
     int client_socket;
     size_t len;
@@ -63,12 +90,43 @@ int connect_client() {
 //
 //
 
-void send_file_to_server(int client_socket)
+message_status send_file_to_server(char* query_cmd, int client_socket)
 {
-    char* fs_name = "../project_tests/data1.csv";
+    
+    message_status mes_status = OK_DONE;
+
+    if(strncmp(query_cmd, "(", 1) != 0)
+    {
+        mes_status = INCORRECT_FORMAT;
+        return mes_status;
+    }
+
+    query_cmd++;
+    query_cmd = trim_newline(query_cmd);
+    query_cmd = trim_whitespace(query_cmd);
+
+    int last_char = strlen(query_cmd) - 1;
+
+    if (query_cmd[last_char] != ')')
+    {
+        mes_status = INCORRECT_FORMAT;
+        return mes_status;
+    }
+
+    query_cmd[last_char] = '\0';
+    query_cmd = trim_quotes(query_cmd);
+
+//debug
+printf("the file path and name is %s", query_cmd);
+
+    char* fs_name = (char* )malloc(DEFAULT_STDIN_BUFFER_SIZE); 
+    
+    strcpy(fs_name,query_cmd);
+
     char read_buffer[DEFAULT_STDIN_BUFFER_SIZE];
     message send_message;
     char *output_str = NULL;
+    //char* handle;
 
     printf("[Client] Sending %s to the Server... ", fs_name);
     
@@ -83,11 +141,12 @@ void send_file_to_server(int client_socket)
     bzero(read_buffer, DEFAULT_STDIN_BUFFER_SIZE);
    
     send_message.payload = read_buffer;
-    
+    int load_file_count = 0;
+
     while (output_str = fgets(read_buffer, DEFAULT_STDIN_BUFFER_SIZE, fs), !feof(fs))
     {
-
-        send_message.length = strlen(read_buffer);
+        
+        send_message.length = strlen(read_buffer) + 4;
         if (send_message.length > 1) 
         {
             // Send the message_header, which tells server payload size
@@ -97,7 +156,14 @@ void send_file_to_server(int client_socket)
                 exit(1);
             }
 
-            // Send the payload (query) to server
+            char* str_buffer = (char*) calloc(100, sizeof(char));
+            strcat(str_buffer, "load");
+
+            strcat(str_buffer, send_message.payload);
+            strcpy(send_message.payload, str_buffer);
+           
+            send_message.payload = trim_newline(send_message.payload);
+            
             if (send(client_socket, send_message.payload, send_message.length, 0) == -1) 
             {
                 log_err("Failed to send query payload.");
@@ -105,8 +171,19 @@ void send_file_to_server(int client_socket)
             }
 
             bzero(read_buffer, DEFAULT_STDIN_BUFFER_SIZE);
+            free(str_buffer);
+
+//            bzero(str_load, DEFAULT_STDIN_BUFFER_SIZE);
         }
     }
+//    send_message.length = strlen("load File Load Complete") + 1;
+    strcpy(send_message.payload, "load File Load Complete");
+    send_message.length = strlen(send_message.payload);
+
+    send(client_socket, &(send_message), sizeof(message), 0);
+    send(client_socket, send_message.payload, send_message.length, 0);
+
+return mes_status;
 }
 //
 
@@ -159,7 +236,7 @@ int main(void)
         send_message.length = strlen(read_buffer);
         if (send_message.length > 1) 
         {
-            // Send the message_header, which tells server payload size
+      // Send the message_header, which tells server payload size
             if (send(client_socket, &(send_message), sizeof(message), 0) == -1) 
             {
                 log_err("Failed to send message header.");
@@ -175,7 +252,9 @@ int main(void)
 
             if (strncmp(send_message.payload, "load", 4) == 0)
             {
-                send_file_to_server(client_socket);
+                char* query_cmd = send_message.payload;
+                query_cmd += 4;
+                send_file_to_server(query_cmd, client_socket);
             }
 
             // Always wait for server response (even if it is just an OK message)
@@ -211,6 +290,22 @@ int main(void)
     }
 //    close(client_socket);
 //debug
-while(1){}
+//while(1){}
+
+//Debug printing
+
+//Column *column_ptr = (current_db->tables)->columns;
+
+//for (int j=0;j<(current_db->tables)->col_count;j++)
+//{
+//for (int i=0;i<(current_db->tables)->data_pos;i++)
+//{
+//printf("Inserted values are %d\n",(column_ptr)->data[i]);
+//}
+//column_ptr++;
+//}
+
+
+
     return 0;
 }

@@ -290,21 +290,11 @@ int main(void)
     }
 //    close(client_socket);
 //debug
-//while(1){}
-
-//Debug printing
-
-//Column *column_ptr = (current_db->tables)->columns;
-
-//for (int j=0;j<(current_db->tables)->col_count;j++)
-//{
-//for (int i=0;i<(current_db->tables)->data_pos;i++)
-//{
-//printf("Inserted values are %d\n",(column_ptr)->data[i]);
-//}
-//column_ptr++;
-//}
-
+while(1)
+{
+    if (strncmp(send_message.payload, "shutdown", 8) == 0)
+        break;
+}
 
 
     return 0;

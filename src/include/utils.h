@@ -10,6 +10,12 @@
 #include <stdarg.h>
 #include <stdio.h>
 
+#include "message.h"
+
+//char* next_token(char** tokenizer, message_status* status);
+
+//char* next_dot_token(char** tokenizer, message_status* status); 
+
 /**
  * trims newline characters from a string (in place)
  **/

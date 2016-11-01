@@ -51,8 +51,10 @@ void handle_client(int client_socket) {
 
 //Debug
 int i = 0;
-LoadFile* lf = (LoadFile*) malloc(sizeof(LoadFile) * 1024);
-lf->element = (char*) malloc(sizeof(char) * 100);
+//LoadFile* lf = (LoadFile*) malloc(sizeof(LoadFile) * 1024);
+//lf->element = (char*) malloc(sizeof(char) * 100);
+
+LoadFile* lf = (LoadFile*) calloc(1024, sizeof(LoadFile));
 
 LoadFile* loadfile_ptr = lf;
     // Continually receive messages from client and execute queries.
@@ -82,8 +84,8 @@ LoadFile* loadfile_ptr = lf;
             recv_message.payload[recv_message.length] = '\0';
             
             char* result;
-//Debug line
-printf("Received msg at the server is %s\n", recv_message.payload);
+//Debug line-> commenting out for test run
+//printf("Received msg at the server is %s\n", recv_message.payload);
 //i++;
 //printf("i is now %d\n", i);
 

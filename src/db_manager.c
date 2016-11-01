@@ -1,9 +1,33 @@
 #include "cs165_api.h"
+#include "utils.h"
+#include "message.h"
+
 #define MAX_TABLE_CAP 10
+#define DEFAULT_QUERY_BUFFER_SIZE 1024
+
 //#define MAX_TABLE_LENGTH 2
 // In this class, there will always be only one active database at a time
 Db *current_db;
 
+/*char* next_token(char** tokenizer, message_status* status) 
+{
+    char* token = strsep(tokenizer, ",");
+    if (token == NULL) 
+    {
+        *status= INCORRECT_FORMAT;
+    }
+    return token;
+}
+*/
+char* next_dot_token(char** tokenizer, message_status* status) 
+{
+    char* token = strsep(tokenizer, ".");
+    if (token == NULL) 
+    {
+        *status= INCORRECT_FORMAT;
+    }
+    return token;
+}
 
 Table* lookup(const char* tbl_name)
 {
@@ -58,7 +82,7 @@ Column* col_lookup(const char* col_name)
 
 }
 
-#define DEFAULT_QUERY_BUFFER_SIZE 1024
+//#define DEFAULT_QUERY_BUFFER_SIZE 1024
 
 /** execute_DbOperator takes as input the DbOperator and executes the query.
  * This should be replaced in your implementation (and its implementation possibly moved to a different file).
@@ -144,6 +168,7 @@ printf("data position value after increment %d \n", (table_ptr->data_pos));
 Column *column_ptr = (current_db->tables)->columns;
 
 //Debug printing
+/*
 for (int j=0;j<(current_db->tables)->col_count;j++)
 {
 for (int i=0;i<(current_db->tables)->data_pos;i++)
@@ -152,7 +177,7 @@ printf("Inserted values are %d\n",(column_ptr)->data[i]);
 }
 column_ptr++;
 }
-
+*/
             return "Data inserted successfully";
             
         case 2 : //SELECTS
@@ -163,6 +188,10 @@ column_ptr++;
             printf("This is a load  query and results will NOT  be returned \n");
             free(query);
 
+        case 6 :
+            printf("This is a shutdown  query and results will NOT  be returned \n");
+            Status synch_status = sync_db(current_db);
+
         default : //EVERYTHING ELSE
             return "Hello 165";
     }
@@ -171,8 +200,6 @@ column_ptr++;
 
 
 //end of execute DB
-
-
 
 
 Result* select_results(char* db_name, char* table_name, char* col_name, char* lower_bound, char* upper_bound)
@@ -346,11 +373,225 @@ printf("Name of the DB in current_db pointer is  %s\n", current_db->name);
 	return ret_status;
 }
 
-void load_insert(DbOperator* dbo, message* send_message, char* lf_ptr)
+Status sync_db(Db* db_ptr)
 {
-    struct Status ret_status;
+    Status sync_status;
+    sync_status.code = OK;
 
-    ret_status.code = OK;
-    return ret_status;
+    FILE *fp_obj_name, *fp_obj_size, *fp_obj_file_name;
+    
+    struct stat st = {0};
+
+    if (stat("data", &st) == -1) 
+    {
+        mkdir("data", 0700);
+    }
+
+    fp_obj_size = fopen("data/DBCatalog_Object_Size.txt", "w+");
+    fp_obj_name = fopen("data/DBCatalog_Object_Name.txt", "w+");
+    fp_obj_file_name = fopen("data/DBCatalog_File_Name.txt", "w+");
+    
+    Table* tbl_ptr = db_ptr->tables;
+    Table* tbl_ptr_copy = tbl_ptr;
+
+    size_t total_column_count = 0;
+    for (int i = 0; i < db_ptr->tables_size; i++)
+    {
+        total_column_count += tbl_ptr_copy->col_count;
+        tbl_ptr_copy++;
+    }
+
+    size_t catalog_size = (db_ptr->tables_size) + (total_column_count) + 1;
+    
+    DbCatalog* dbc = malloc(sizeof(DbCatalog)*catalog_size);
+    DbCatalog* dbc_copy = dbc;
+    
+    strcpy(dbc_copy->obj_name, db_ptr->name);
+    dbc_copy->obj_size = db_ptr->tables_size;
+    strcpy(dbc_copy->obj_file_name, "null");
+
+    size_t table_count = db_ptr->tables_size;
+
+    if (table_count == 0)
+        return sync_status;
+
+    for(int i = 0; i < table_count; i++)
+    {
+        dbc_copy++;
+        strcpy(dbc_copy->obj_name, tbl_ptr->name);
+        dbc_copy->obj_size = db_ptr->tables_size;
+        strcpy(dbc_copy->obj_file_name, "null");
+
+        size_t column_count = tbl_ptr->col_count;
+        Column* col_ptr = tbl_ptr->columns;
+
+        for(int j = 0; j < column_count; j++)
+        {
+            dbc_copy++;
+
+            strcpy(dbc_copy->obj_file_name, db_ptr->name);
+            strcat(dbc_copy->obj_file_name, ".");
+            strcat(dbc_copy->obj_file_name, tbl_ptr->name);
+            strcat(dbc_copy->obj_file_name, ".");
+            strcat(dbc_copy->obj_file_name, col_ptr->name);
+            strcat(dbc_copy->obj_file_name, ".bin");
+
+            strcpy(dbc_copy->obj_name, col_ptr->name);
+            dbc_copy->obj_size = tbl_ptr->data_pos;
+
+            col_ptr++;
+        }
+
+        tbl_ptr++;
+   }
+
+//persisting the DB Catalog on disk
+    dbc_copy = dbc;
+    char* str_obj_size[64];
+
+    for (int i = 0; i < catalog_size; i++)
+    {
+        fputs(dbc_copy->obj_name, fp_obj_name);
+        fputs("\n", fp_obj_name);
+        
+        sprintf(str_obj_size, "%d", dbc_copy->obj_size);
+        
+        fputs(str_obj_size, fp_obj_size);
+        fputs("\n", fp_obj_size);
+        
+        fputs(dbc_copy->obj_file_name, fp_obj_file_name);
+        fputs("\n", fp_obj_file_name);
+
+        dbc_copy++;
+    }
+        
+        fclose(fp_obj_name);
+        fclose(fp_obj_size);
+        fclose(fp_obj_file_name);
+   
+
+//persisting the DB columns on disk now
+    tbl_ptr = db_ptr->tables;
+    Column* col_ptr = tbl_ptr->columns;;
+    dbc_copy = dbc;
+
+    for(int i = 0; i < catalog_size; i++)
+    {
+        if(strcmp(dbc_copy->obj_file_name,  "null") == 0)
+        {
+            dbc_copy++;
+            continue;
+        }
+
+        char str_file_name[64];
+        strcpy(str_file_name, "data/");
+        strcat(str_file_name, dbc_copy->obj_file_name);
+
+        FILE* fp_col_data = fopen(str_file_name, "wb+");
+
+        for (int i = 0; i < dbc_copy->obj_size; i++)
+        {
+            fwrite(&col_ptr, sizeof(col_ptr), 1, fp_col_data);
+            col_ptr++;
+        }
+
+        fclose(fp_col_data);
+        dbc_copy++;
+    }
+
+
+//testing the column object here
+//Commenting for now
+/*
+Column* col_test;
+Table* tbl_test;
+FILE *fp_col_test;
+fp_col_test=fopen("data/db1.tbl1.col1.bin","rb");
+
+FILE* fp_test_table = fopen("data/testTable.bin", "wb+");
+fwrite(&tbl_ptr, sizeof(tbl_ptr), 1, fp_test_table);
+fclose(fp_test_table);
+
+fread(&col_test,sizeof(Column),1,fp_col_test);
+printf("%s\n",col_test->name);
+printf("%d\n",col_test->data[0]);
+
+FILE* fp_tbl_read = fopen("data/testTable.bin","rb");
+fread(&tbl_test, sizeof(Table), 1, fp_tbl_read);
+printf("%s\n", tbl_test->name);
+printf("%s\n", ((tbl_test)->columns)->name);
+printf("%d\n", ((tbl_test)->columns)->data[1]);
+
+fclose(fp_col_test);
+fclose(fp_tbl_read);
+
+
+FILE* fp_test_db = fopen("data/testDB.bin", "wb+");
+fwrite(&db_ptr, sizeof(db_ptr), 1, fp_test_db);
+fclose(fp_test_db);
+
+Db* db_test;
+FILE* fp_db_read = fopen("data/testDB.bin","rb");
+fread(&db_test, sizeof(Db), 1, fp_db_read);
+printf("%s\n", db_test->name);
+*/
+//End testing
+    return sync_status;
+}
+
+void load_insert(DbOperator* dbo, message* send_message, LoadFile* lf_ptr)
+{
+    message_status mes_status = OK_DONE;
+
+    lf_ptr++; //lf[1] has the header
+    char** handle_index = &(lf_ptr->element);
+    char* db_name = next_dot_token(handle_index, &mes_status);
+    //get rid of load
+    db_name = db_name + 4;
+    char* table_name = next_dot_token(handle_index, &mes_status);
+
+    Table* insert_table = lookup(table_name);
+    Column* col = insert_table->columns;
+    lf_ptr++; //lf[2] is where the actual data starts    
+
+    char* token = NULL;
+
+    dbo->type = INSERT;    
+    
+    dbo->operator_fields.insert_operator.table = insert_table;
+    dbo->operator_fields.insert_operator.values = malloc(sizeof(int) * insert_table->col_count);
+    
+    //int columns_inserted = 0;
+    char* result;
+    char** command_index = NULL;
+
+    while((lf_ptr->element) != NULL)
+    {   
+        lf_ptr->element += 4;
+        command_index = &(lf_ptr->element);
+        int columns_inserted = 0;
+
+        //get rid of load keyword
+        //token = token + 4;
+
+        while ((token = strsep(command_index, ",")) != NULL)
+        {
+            //get rid of load keyword
+            //token = token + 4;
+            int insert_val = atoi(token);
+            dbo->operator_fields.insert_operator.values[columns_inserted] = insert_val;
+            columns_inserted++;
+        }
+
+        if (columns_inserted != insert_table->col_count)
+        {
+            send_message->status = INCORRECT_FORMAT;
+            free (dbo);
+        }
+        
+        result = execute_DbOperator(dbo);
+        lf_ptr++;
+    }
+
 }
 

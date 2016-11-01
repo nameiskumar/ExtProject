@@ -9,6 +9,26 @@
 #define ANSI_COLOR_GREEN   "\x1b[32m"
 #define ANSI_COLOR_RESET   "\x1b[0m"
 
+/*char* next_token(char** tokenizer, message_status* status) 
+{
+    char* token = strsep(tokenizer, ",");
+    if (token == NULL) 
+    {
+        *status= INCORRECT_FORMAT;
+    }
+    return token;
+}
+
+char* next_dot_token(char** tokenizer, message_status* status) 
+{
+    char* token = strsep(tokenizer, ".");
+    if (token == NULL) 
+    {
+        *status= INCORRECT_FORMAT;
+    }
+    return token;
+}
+*/
 char* trim_newline(char *str) {
     int length = strlen(str);
     int current = 0;

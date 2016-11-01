@@ -95,7 +95,8 @@ printf("table  name before calling create column fn is ***********%s\n", table_n
      }
 
 //Debug line
-//
+//Commenting out the debug code for testing
+/*
 Table* tbl_ptr;
 Column* col_ptr;
 tbl_ptr = current_db->tables;
@@ -134,7 +135,7 @@ for(int i = 0; i < current_db->tables_size; i++)
     printf("*************************\n");
     tbl_ptr++;
 }
-}
+}*/
     return status;
 }
 
@@ -538,13 +539,22 @@ printf("inside parse_command fn when create is issued \n");
         query_command += 17;
         dbo = parse_insert(query_command, send_message);
     }
+
+
+    else if(strncmp(query_command, "shutdown", 8) == 0)
+    {
+        dbo = malloc(sizeof(DbOperator));
+        dbo->type = SHUTDOWN;
+    }
     
     if (dbo == NULL) 
     {
         return dbo;
     }
     
+
     dbo->client_fd = client_socket;
     dbo->context = context;
+    
     return dbo;
 }

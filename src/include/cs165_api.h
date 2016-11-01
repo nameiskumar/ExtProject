@@ -29,6 +29,11 @@ SOFTWARE.
 #include <stdbool.h>
 #include <stdio.h>
 #include "message.h"
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
+
+
 //#include "common.h"
 //#include "parse.h"
 //#include "utils.h"
@@ -38,6 +43,23 @@ SOFTWARE.
 #define MAX_SIZE_NAME 64
 #define HANDLE_MAX_SIZE 64
 #define MAX_TABLE_LENGTH 1024
+
+
+/**
+ *
+ * DataCatalog to store contents of Data Catalog before transferring 
+ * to the corresponding files.
+ * Flag to mark what type of data is held in the struct.
+**/
+
+typedef struct DbCatalog
+{
+    char obj_name[MAX_SIZE_NAME];
+    int obj_size;
+    char obj_file_name[MAX_SIZE_NAME];
+} DbCatalog;
+
+
 
 /**
  * EXTRA
@@ -216,7 +238,8 @@ typedef enum OperatorType {
     OPEN,
     LOAD,
     SELECT,
-    FETCH
+    FETCH,
+    SHUTDOWN
 } OperatorType;
 /*
  * necessary fields for insertion

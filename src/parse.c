@@ -389,6 +389,72 @@ printf("%s\n", query_command);
 }
 
 
+
+
+/**
+ * parse_fetch takes as input the send_message from the client and then
+ * parses it into the appropriate query. Stores into send_message the
+ * status to send back.
+ * Returns db operator
+ **/
+
+DbOperator* parse_fetch(char* query_command, char* handle, int client_socket, ClientContext* context, message* send_message)
+{
+    send_message->status = OK_DONE;
+
+    if(strncmp(query_command, "(", 1) == 0)
+    {
+        query_command++;
+    }
+
+    query_command = trim_newline(query_command);
+    query_command = trim_whitespace(query_command);
+
+    int last_char = strlen(query_command) - 1;
+
+    if (query_command[last_char] != ')')
+    {
+        printf("INCORRECT_FORMAT");
+        send_message->status = UNKNOWN_COMMAND;
+        return NULL;
+    }
+  
+    query_command[last_char] = '\0';
+
+    char** command_index = &query_command;
+    char* db_object = next_token(command_index, &send_message->status);
+  
+    char* select_var = query_command;
+  
+    command_index = &db_object;
+    char* db_name = strsep(command_index, ".");
+ 
+    command_index = &db_object;
+    char* tbl_name = strsep(command_index, ".");
+    char* col_name = db_object;
+
+    Table* tbl_ptr = lookup(tbl_name);
+    Column* col_ptr = col_lookup(col_name);
+
+    DbOperator* dbo = malloc(sizeof(DbOperator));
+    dbo->type = FETCH;
+
+    dbo->operator_fields.fetch_operator.table = tbl_ptr;
+    dbo->operator_fields.fetch_operator.column = col_ptr;
+
+    //setting the context here for fetch  query
+    ClientContext* client_context = context;
+    client_context->chandle_table = (GeneralizedColumnHandle* )malloc(sizeof(GeneralizedColumnHandle));
+    strcpy((client_context->chandle_table)->name, handle);
+
+    strcpy(dbo->operator_fields.fetch_operator.select_handle_name, select_var);
+
+    dbo->context = client_context;
+
+return dbo;
+
+}
+
 /**
  * parse_select takes as input the send_message from the client and then
  * parses it into the appropriate query. Stores into send_message the
@@ -396,8 +462,10 @@ printf("%s\n", query_command);
  * Returns a db_operator.
  **/
 
-DbOperator* parse_select(char* query_command, char* handle, int client_socket, message* send_message)
+DbOperator* parse_select(char* query_command, char* handle, int client_socket, ClientContext* context, message* send_message)
 {
+
+    send_message->status = OK_DONE;
 
     if(strncmp(query_command, "(", 1) == 0)
     {
@@ -415,6 +483,7 @@ printf("Last char is %c \n", query_command[last_char]);
     if (query_command[last_char] != ')')
     {
         printf("INCORRECT_FORMAT");
+        send_message->status = UNKNOWN_COMMAND;
     }
     
     query_command[last_char] = '\0';
@@ -448,17 +517,57 @@ printf("db name is %s \n", db_name);
 printf("the table name is %s \n", table_name);
 printf("the col_name is %s \n", col_name);
 
+    
+    Comparator* comp = (Comparator* )malloc(sizeof(Comparator));
 
+    if(strcmp(lower_bound, "null") == 0)
+    {
+        comp->p_low = -2147483648;
+        comp->p_high = atoi(upper_bound);
+        comp->type1 = LESS_THAN;
+    }
+
+    else if(strcmp(upper_bound, "null") == 0)
+    {
+        comp->p_high = 2147483647;
+        comp->p_low = atoi(lower_bound);
+        comp->type1 = GREATER_THAN_OR_EQUAL;
+    }
+
+    else
+    {
+        comp->p_low = atoi(lower_bound);
+        comp->p_high = atoi(upper_bound);
+    }
+    
+    Table* tbl_ptr = lookup(table_name);
+    Column* col_ptr = col_lookup(col_name);
+    
     DbOperator* dbo = malloc(sizeof(DbOperator));
     dbo->type = SELECT;
-    dbo->context = malloc(sizeof(ClientContext));
-    (dbo->context)->chandles_in_use = 0;
-    (dbo->context)->chandle_slots = 10;
 
-//debug
-Column* col_ptr = col_lookup(col_name);
+    dbo->operator_fields.select_operator.comparator = comp;
+    dbo->operator_fields.select_operator.table = tbl_ptr;
 
-    Result* res = select_results(db_name, table_name, col_name, lower_bound, upper_bound);
+    comp->gen_col = (GeneralizedColumn* )malloc(sizeof(GeneralizedColumn));
+    (comp->gen_col)->column_type = COLUMN;
+    (comp->gen_col)->column_pointer.column = col_ptr;
+    comp->handle = (char* )malloc(sizeof(char));
+    strcpy(comp->handle, handle);
+
+    //setting the context here for select query
+    ClientContext* client_context = context;
+
+    client_context->chandle_table = (GeneralizedColumnHandle* )malloc(sizeof(GeneralizedColumnHandle));
+
+    strcpy((client_context->chandle_table)->name, handle);
+
+    /*chandle_table->generalized_column = (GeneralizedColumn* )malloc(sizeof(GeneralizedColumn));
+    (chandle_table->generalized_column)->column_type = RESULT;
+    (chandle_table->generalized_column)->column_pointer = (GeneralizedColumnPointer* )malloc(sizeof(GeneralizedColumnPointer));
+    ((chandle_table->generalized_column)->column_pointer)->result = res;
+*/
+    dbo->context = client_context;
 
 return dbo;
 
@@ -506,11 +615,18 @@ DbOperator* parse_command(char* query_command, message* send_message, int client
     if(strncmp(query_command, "select", 6) == 0)
     {
         query_command += 6;
-        dbo = parse_select(query_command, handle, client_socket, send_message);
+        dbo = parse_select(query_command, handle, client_socket, context, send_message);
 //debug
 printf("the variable is %s \n", handle);
 //printf("the query is  %s \n", query_command);
     } 
+   
+   else if(strncmp(query_command, "fetch", 5) == 0)
+   {
+        query_command += 5;
+        dbo = parse_fetch(query_command, handle, client_socket, context, send_message);
+    
+    }    
     
     else 
     {
@@ -527,7 +643,7 @@ printf("the variable is %s \n", handle);
         query_command += 6;
 
 //Debug line
-printf("inside parse_command fn when create is issued \n");
+printf("inside pare_command fn when create is issued \n");
 
         send_message->status = parse_create(query_command);
         dbo = malloc(sizeof(DbOperator));
@@ -554,7 +670,7 @@ printf("inside parse_command fn when create is issued \n");
     
 
     dbo->client_fd = client_socket;
-    dbo->context = context;
+    //dbo->context = context;
     
     return dbo;
 }

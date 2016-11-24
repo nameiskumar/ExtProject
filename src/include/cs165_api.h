@@ -259,12 +259,32 @@ typedef struct LoadOperator
 } LoadOperator;
 
 /*
- * necessary fields for insertion
+ * necessary fields for selection
  */
+typedef struct SelectOperator
+{
+    Table* table;
+    Comparator* comparator;
+} SelectOperator;
+
+
+/*
+ * necessary fields for selection
+ */
+typedef struct FetchOperator
+{
+    Table* table;
+    Column* column;
+    char select_handle_name[HANDLE_MAX_SIZE];
+
+} FetchOperator;
+
 
 typedef struct OpenOperator {
     char* db_name;
 } OpenOperator;
+
+
 /*
  * union type holding the fields of any operator
  * Added LoadOperator for file loading
@@ -273,6 +293,8 @@ typedef union OperatorFields {
     InsertOperator insert_operator;
     OpenOperator open_operator;
     LoadOperator load_operator;
+    SelectOperator select_operator;
+    FetchOperator fetch_operator;
 } OperatorFields;
 /*
  * DbOperator holds the following fields:
@@ -311,7 +333,7 @@ Column* create_column(const char* column_name, char* table_name, bool sorted, St
 
 DbOperator* parse_load(char* query_command, message* send_message);
 
-DbOperator* parse_select(char* query_command, char* handle, int client_socket, message* send_message);
+DbOperator* parse_select(char* query_command, char* handle, int client_socket, ClientContext* context, message* send_message);
 
 Result* select_results(char* db_name, char* table_name, char* col_name, char* lower_bound, char* upper_bound);
 

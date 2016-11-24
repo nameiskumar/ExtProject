@@ -30,6 +30,20 @@
 #include "client_context.h"
 
 #define DEFAULT_QUERY_BUFFER_SIZE 2048
+#define DEFAULT_CLIENT_HANDLE_SLOTS 16
+
+/**
+ * init_client_context
+ * This function initializes the client context
+ **/
+
+void init_client_context(ClientContext* client_context)
+{
+    client_context->chandles_in_use = 0;
+    client_context->chandle_slots = DEFAULT_CLIENT_HANDLE_SLOTS;
+
+    client_context->chandle_table = (GeneralizedColumnHandle* )malloc(sizeof(GeneralizedColumnHandle) * client_context->chandle_slots);
+}
 
 /**
  * handle_client(client_socket)
@@ -46,8 +60,13 @@ void handle_client(int client_socket) {
     message send_message;
     message recv_message;
 
+//start the db befoe taking client requests
+    Status db_startup_status;
+    db_startup_status = db_startup();
+
     // create the client context here
-    ClientContext* client_context = NULL;
+    ClientContext* client_context = (ClientContext* )malloc(sizeof(ClientContext));
+    init_client_context(client_context);
 
 //Debug
 int i = 0;
@@ -64,14 +83,14 @@ LoadFile* loadfile_ptr = lf;
     // 4. Send response of request.
     do 
     {
-        
+      
         length = recv(client_socket, &recv_message, sizeof(message), 0);
         if (length < 0) 
         {
             log_err("Client connection closed!\n");
             exit(1);
         } 
-        
+      
         else if (length == 0) 
         {
             done = 1;
@@ -98,10 +117,7 @@ LoadFile* loadfile_ptr = lf;
 
                     dbo->client_fd = client_socket;
                     dbo->type = LOAD;
-                    /*dbo->context = malloc(sizeof(ClientContext));
-                    dbo->client_fd = client_socket;
-                    dbo->chandle_table = malloc(sizeof(GeneralizedColumnHandle));
-                    (dbo->chandle_table)->*/
+                
                     load_insert(dbo, &send_message, loadfile_ptr);
                     result = "Loaded......";
                 }
@@ -112,22 +128,20 @@ LoadFile* loadfile_ptr = lf;
                     strcpy(lf->element, recv_message.payload);
                     lf++;
                     result = "Loading......";
-                }   
+                }
             }
 
             else
             {
             // 1. Parse command
-            DbOperator* query = parse_command(recv_message.payload, &send_message, client_socket, client_context);
+                DbOperator* query = parse_command(recv_message.payload, &send_message, client_socket, client_context);
 
-//Debug line
-if(query != NULL)
-{
-printf("query is %d\n", query);
-printf("CLient-fd value in the query is %d\n", query->client_fd);
-}
                 // 2. Handle request
-            result = execute_DbOperator(query);
+
+                (client_context->chandle_table)->generalized_column.column_type = RESULT;
+                (client_context->chandle_table)->generalized_column.column_pointer.result = execute_DbOperator(query);
+
+                client_context->chandle_table++;
             }
 
             send_message.length = strlen(result);

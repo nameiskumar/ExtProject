@@ -190,7 +190,9 @@ return mes_status;
 int main(void)
 {
     int client_socket = connect_client();
-    if (client_socket < 0) {
+    if (client_socket < 0) 
+    {
+        printf("client exiting due to socket connect");
         exit(1);
     }
 
@@ -200,7 +202,9 @@ int main(void)
     // Always output an interactive marker at the start of each command if the
     // input is from stdin. Do not output if piped in from file or from other fd
     char* prefix = "";
-    if (isatty(fileno(stdin))) {
+    if (isatty(fileno(stdin))) 
+    {
+       // printf("client exiting due to stdin");
         prefix = "db_client > ";
     }
 
@@ -290,12 +294,15 @@ int main(void)
     }
 //    close(client_socket);
 //debug
+
 while(1)
 {
-    if (strncmp(send_message.payload, "shutdown", 8) == 0)
-        break;
+    //printf("in the while loop the value of the payload while exiting is %s", send_message.payload);
+    //if (strncmp(send_message.payload, "shutdown", 8) == 0)
+      //  break;
 }
-
+//printf("client is now exiting");
+//printf("the value of the payload while exiting is %s", send_message.payload);
 
     return 0;
 }

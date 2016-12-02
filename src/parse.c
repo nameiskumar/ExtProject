@@ -10,6 +10,8 @@
 #include "client_context.h"
 #include "message.h"
 
+#define MAX_VAR_COUNT_SIZE 16
+
 /**
  * Takes a pointer to a string.
  * This method returns the original string truncated to where its first comma lies.
@@ -24,13 +26,12 @@ char* next_token(char** tokenizer, message_status* status) {
     }
     return token;
 }
-
 /**
  * This method takes in a string representing the arguments to create a column.
  * It parses those arguments, checks that they are valid, and creates the coulmns.
  **/
 
-message_status parse_create_col(char* create_arguments) 
+message_status parse_create_col(char* create_arguments)
 {
     printf("Entering  parse_create_col fn \n");
     message_status status = OK_DONE;
@@ -45,7 +46,7 @@ printf("create args is *********%s\n", create_arguments);
 printf("db name is *******%s\n",db_name);
 printf("column name is ***********%s\n", column_name);
 
-    if (strcmp(current_db->name, db_name) != 0) 
+    if (strcmp(current_db->name, db_name) != 0)
     {
         cs165_log(stdout, "query unsupported. Bad db name");
         return QUERY_UNSUPPORTED;
@@ -55,7 +56,6 @@ printf("column name is ***********%s\n", column_name);
     {
         return INCORRECT_FORMAT;
     }
-    
     int last_char = strlen(create_arguments) - 1;
 
 //Debug line
@@ -63,11 +63,10 @@ printf("create args after len  is *********%s\n", create_arguments);
 printf("len of agrs-1 is ********%d\n",last_char);
 printf("the last char of create args is******%c\n", create_arguments[last_char]);
 
-    if (create_arguments[last_char] != ')') 
+    if (create_arguments[last_char] != ')')
     {
         return INCORRECT_FORMAT;
     }
-    
     create_arguments[last_char] = '\0';
     char* table_name = create_arguments;
 
@@ -77,7 +76,7 @@ printf("table name after last char made null is**** %s\n",table_name);
 printf("db name is *******%s\n",db_name);
 printf("column name is ***********%s\n", column_name);
 printf("the value of crrent_db and db_name are %s and %s********",current_db->name,db_name);
-    if (strcmp(current_db->name, db_name) != 0) 
+    if (strcmp(current_db->name, db_name) != 0)
     {
         cs165_log(stdout, "query unsupported. Bad db name");
         return QUERY_UNSUPPORTED;
@@ -361,14 +360,14 @@ DbOperator* parse_load(char* query_command, message* send_message)
     query_command = trim_whitespace(query_command);
 
     int last_char = strlen(query_command) - 1;
-   
+
     printf("Last char is %c \n", query_command[last_char]);
 
     if (query_command[last_char] != ')')
     {
         printf(")INCORRECT_FORMAT");
     }
-    
+
     query_command[last_char] = '\0';
 //char* load_file_copy = strsep(table_name_index, "/");
 //Debug 
@@ -377,11 +376,9 @@ printf("%s\n", query_command);
     query_command = trim_quotes(query_command);
 //debug
 printf("%s\n", query_command);
-    
-    
+
     DbOperator* dbo = malloc(sizeof(DbOperator));
     dbo->type = LOAD;
-    
     //load_File(query_command);
     //Will code later
 
@@ -389,7 +386,58 @@ printf("%s\n", query_command);
 }
 
 
+/**
+ * parse_print takes as input the send_message from the client and then
+ * parses it into the appropriate query. Stores into send_message the
+ * status to send back.
+ * Returns db operator
+**/
 
+DbOperator* parse_print(char* query_command, char* handle, int client_socket, ClientContext* context, message* send_message)
+{
+    send_message->status = OK_WAIT_FOR_RESPONSE;
+    if(strncmp(query_command, "(", 1) == 0)
+    {
+        query_command++;
+    }
+
+    query_command = trim_newline(query_command);
+    query_command = trim_whitespace(query_command);
+
+    int last_char = strlen(query_command) - 1;
+
+    if (query_command[last_char] != ')')
+    {
+        printf("INCORRECT_FORMAT");
+        send_message->status = UNKNOWN_COMMAND;
+        return NULL;
+    }
+
+    query_command[last_char] = '\0';
+
+    DbOperator* dbo = malloc(sizeof(DbOperator));
+    dbo->type = PRINT;
+    dbo->operator_fields.print_operator.var_count = 0;
+    VariablePool* var_pool_ptr = malloc(sizeof(VariablePool) * MAX_VAR_COUNT_SIZE);
+    dbo->operator_fields.print_operator.var_pool = var_pool_ptr;
+
+    char** query_command_index = &query_command;
+    //message_status status = OK_DONE;
+
+    char* var_name = next_token(query_command_index, &(send_message->status));
+    while(var_name != NULL)
+    {
+        strcpy(var_pool_ptr->name, var_name);
+        dbo->operator_fields.print_operator.var_count++;
+        var_pool_ptr++;
+
+        var_name = next_token(query_command_index, &(send_message->status));
+    }
+
+    dbo->context = context;
+
+return dbo;
+}
 
 /**
  * parse_fetch takes as input the send_message from the client and then
@@ -418,17 +466,17 @@ DbOperator* parse_fetch(char* query_command, char* handle, int client_socket, Cl
         send_message->status = UNKNOWN_COMMAND;
         return NULL;
     }
-  
+ 
     query_command[last_char] = '\0';
 
     char** command_index = &query_command;
     char* db_object = next_token(command_index, &send_message->status);
-  
+
     char* select_var = query_command;
-  
+
     command_index = &db_object;
     char* db_name = strsep(command_index, ".");
- 
+
     command_index = &db_object;
     char* tbl_name = strsep(command_index, ".");
     char* col_name = db_object;
@@ -444,8 +492,18 @@ DbOperator* parse_fetch(char* query_command, char* handle, int client_socket, Cl
 
     //setting the context here for fetch  query
     ClientContext* client_context = context;
-    client_context->chandle_table = (GeneralizedColumnHandle* )malloc(sizeof(GeneralizedColumnHandle));
-    strcpy((client_context->chandle_table)->name, handle);
+    //client_context->chandle_table = (GeneralizedColumnHandle* )malloc(sizeof(GeneralizedColumnHandle));
+    GeneralizedColumnHandle* chandle_table_ptr = client_context->chandle_table;
+
+    int i = 0;
+    while(i != client_context->chandles_in_use)
+    {
+        chandle_table_ptr++;
+        i++;
+    }
+
+    strcpy((chandle_table_ptr)->name, handle);
+    client_context->chandles_in_use++;
 
     strcpy(dbo->operator_fields.fetch_operator.select_handle_name, select_var);
 
@@ -558,9 +616,19 @@ printf("the col_name is %s \n", col_name);
     //setting the context here for select query
     ClientContext* client_context = context;
 
-    client_context->chandle_table = (GeneralizedColumnHandle* )malloc(sizeof(GeneralizedColumnHandle));
+    //client_context->chandle_table = (GeneralizedColumnHandle* )malloc(sizeof(GeneralizedColumnHandle));
+    GeneralizedColumnHandle* chandle_table_ptr = client_context->chandle_table;
 
-    strcpy((client_context->chandle_table)->name, handle);
+    int i = 0;
+
+    while(i != client_context->chandles_in_use)
+    {
+        chandle_table_ptr++;
+        i++;
+    }
+
+    strcpy((chandle_table_ptr)->name, handle);
+    client_context->chandles_in_use++;
 
     /*chandle_table->generalized_column = (GeneralizedColumn* )malloc(sizeof(GeneralizedColumn));
     (chandle_table->generalized_column)->column_type = RESULT;
@@ -602,8 +670,7 @@ DbOperator* parse_command(char* query_command, message* send_message, int client
 
     char *equals_pointer = strchr(query_command, '=');
     char *handle = query_command;
-  
-    if (equals_pointer != NULL) 
+    if (equals_pointer != NULL)
     {
         // handle file table
         *equals_pointer = '\0';
@@ -619,16 +686,13 @@ DbOperator* parse_command(char* query_command, message* send_message, int client
 //debug
 printf("the variable is %s \n", handle);
 //printf("the query is  %s \n", query_command);
-    } 
-   
+    }
    else if(strncmp(query_command, "fetch", 5) == 0)
    {
         query_command += 5;
         dbo = parse_fetch(query_command, handle, client_socket, context, send_message);
-    
-    }    
-    
-    else 
+    }
+    else
     {
         handle = NULL;
     }
@@ -638,7 +702,7 @@ printf("the variable is %s \n", handle);
     send_message->status = OK_DONE;
     query_command = trim_whitespace(query_command);
 
-    if (strncmp(query_command, "create", 6) == 0) 
+    if (strncmp(query_command, "create", 6) == 0)
     {
         query_command += 6;
 
@@ -648,29 +712,31 @@ printf("inside pare_command fn when create is issued \n");
         send_message->status = parse_create(query_command);
         dbo = malloc(sizeof(DbOperator));
         dbo->type = CREATE;
-    } 
-    
-    else if (strncmp(query_command, "relational_insert", 17) == 0) 
+    }
+    else if (strncmp(query_command, "relational_insert", 17) == 0)
     {
         query_command += 17;
         dbo = parse_insert(query_command, send_message);
     }
-
 
     else if(strncmp(query_command, "shutdown", 8) == 0)
     {
         dbo = malloc(sizeof(DbOperator));
         dbo->type = SHUTDOWN;
     }
-    
-    if (dbo == NULL) 
+
+    else if(strncmp(query_command, "print", 5) == 0)
+    {
+        query_command += 5;
+        dbo = parse_print(query_command, handle, client_socket, context, send_message);
+    }
+
+    if (dbo == NULL)
     {
         return dbo;
     }
-    
 
     dbo->client_fd = client_socket;
     //dbo->context = context;
-    
     return dbo;
 }

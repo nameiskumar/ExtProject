@@ -110,6 +110,9 @@ printf("inside DBOperator-end\n");
     message_status status;
     Comparator* comp;
 
+    Result* res = (Result* )malloc(sizeof(Result));
+    char* select_var;
+
     switch(query->type)
     {
         case 0 : //CREATE Queries
@@ -184,15 +187,14 @@ column_ptr++;
             return "Data inserted successfully";
 
         case 4 : //SELECTS
-            
             comp = query->operator_fields.select_operator.comparator;
             table_ptr = query->operator_fields.select_operator.table;
 
             //comp->gen_col = (GeneralizedColumn* )malloc(sizeof(GeneralizedColumn));
+            GeneralizedColumnHandle* chandle_table_ptr = (query->context)->chandle_table;
             col_ptr = (comp->gen_col)->column_pointer.column;
 
             Result* res_ptr = (Result* )malloc(sizeof(Result));
-           
             res_ptr->data_type = INT;
             res_ptr->num_tuples = 0;
 
@@ -207,23 +209,94 @@ column_ptr++;
                 }
             }
 
+            for(int i = 0; i <  ((query->context)->chandles_in_use - 1); i++)
+            {
+                chandle_table_ptr++;
+            }
+
+            chandle_table_ptr->generalized_column.column_pointer.result = res_ptr;
 
             printf("This is select query and results will be returned \n");
-            return res_ptr;
+            return "Get the results from Select Result Pointer";
 
         case 3 : //LOADS
             printf("This is a load  query and results will NOT  be returned \n");
             free(query);
 
         case 5 : //fetch
-           
-            Result* res_ptr = (Result* )malloc(sizeof(Result));
-            res_ptr->data_type = INT;
-            res_ptr->num_tuples = 0;
-
             col_ptr = query->operator_fields.fetch_operator.column;
+            GeneralizedColumnHandle* chandle_table_ptr_fetch = (query->context)->chandle_table;
+            strcpy(select_var, query->operator_fields.fetch_operator.select_handle_name);
 
-        case 6 :
+            for(int i = 0; i < (query->context)->chandles_in_use; i++)
+            {
+                if(strcmp(select_var, chandle_table_ptr_fetch->name) == 0)
+                {
+                    res = chandle_table_ptr_fetch->generalized_column.column_pointer.result;
+                    break;
+                }
+
+                else
+                {
+                    chandle_table_ptr_fetch++;
+                }
+            }
+
+            Result* fetch_res = malloc(sizeof(Result));
+            fetch_res->payload = (int *) malloc(sizeof(int) * res->num_tuples);
+            fetch_res->num_tuples = res->num_tuples;
+
+            for(int i = 0; i < res->num_tuples; i++)
+            {
+                fetch_res->payload[i] = col_ptr->data[res->payload[i]];
+            }
+
+            chandle_table_ptr_fetch = (query->context)->chandle_table;
+
+            for(int i = 0; i <  ((query->context)->chandles_in_use - 1); i++)
+            {
+                chandle_table_ptr_fetch++;
+            }
+
+            chandle_table_ptr_fetch->generalized_column.column_pointer.result = fetch_res;
+            return "Get the results from Fetch Result Pointer";
+
+        case 6 : //print
+            char* print_var;
+            char* str_res;
+            char res_buf[25];
+
+            VariablePool* var_pool_ptr = query->operator_fields.print_operator.var_pool;
+            GeneralizedColumnHandle* chandle_table_ptr = (query->context)->chandle_table;
+
+            for(int i = 0; i < query->operator_fields.print_operator.var_count; i++)
+            {
+                strcpy(ptrint_var, var_pool_ptr->name);
+
+                for(int j = 0; j < (query->context)->chandles_in_use; j++)
+                {
+                    if(strcmp(print_var, chandle_table_ptr->name) == 0)
+                    {
+
+
+            strcpy(print_var, query->operator_fields.print_operator.name);
+
+            for(int i = 0; i <  (query->context)->chandles_in_use; i++)
+            {
+                if (strcmp(print_var, chandle_table_ptr->
+                chandle_table_ptr_fetch++;
+            }
+
+
+
+            strcpy(print_var, query->operator_fields.print_operator.name);
+
+
+
+
+
+
+        case 7 :
             printf("This is a shutdown  query and results will NOT  be returned \n");
             Status synch_status = sync_db(current_db);
 

@@ -239,6 +239,7 @@ typedef enum OperatorType {
     LOAD,
     SELECT,
     FETCH,
+    PRINT,
     SHUTDOWN
 } OperatorType;
 /*
@@ -253,7 +254,7 @@ typedef struct InsertOperator {
  * Added LoadOperator struct
  */
 
-typedef struct LoadOperator 
+typedef struct LoadOperator
 {
     char* file_content;
 } LoadOperator;
@@ -279,6 +280,18 @@ typedef struct FetchOperator
 
 } FetchOperator;
 
+typedef struct VariablePool
+{
+    char name[HANDLE_MAX_SIZE];
+
+} VariablePool;
+
+typedef struct PrintOperator
+{
+    int var_count;
+    VariablePool* var_pool;
+
+} PrintOperator;
 
 typedef struct OpenOperator {
     char* db_name;
@@ -295,6 +308,7 @@ typedef union OperatorFields {
     LoadOperator load_operator;
     SelectOperator select_operator;
     FetchOperator fetch_operator;
+    PrintOperator print_operator;
 } OperatorFields;
 /*
  * DbOperator holds the following fields:

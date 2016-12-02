@@ -137,11 +137,11 @@ LoadFile* loadfile_ptr = lf;
                 DbOperator* query = parse_command(recv_message.payload, &send_message, client_socket, client_context);
 
                 // 2. Handle request
+                result = execute_DbOperator(query);
+                //(client_context->chandle_table)->generalized_column.column_type = RESULT;
+                //(client_context->chandle_table)->generalized_column.column_pointer.result = execute_DbOperator(query);
 
-                (client_context->chandle_table)->generalized_column.column_type = RESULT;
-                (client_context->chandle_table)->generalized_column.column_pointer.result = execute_DbOperator(query);
-
-                client_context->chandle_table++;
+                //client_context->chandle_table++;
             }
 
             send_message.length = strlen(result);

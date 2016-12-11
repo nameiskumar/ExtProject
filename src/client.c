@@ -262,7 +262,7 @@ int main(void)
             }
 
             // Always wait for server response (even if it is just an OK message)
-            if ((len = recv(client_socket, &(recv_message), sizeof(message), 0)) > 0) 
+            if ((len = recv(client_socket, &(recv_message), sizeof(message), MSG_WAITALL)) > 0) 
             {
                 if (recv_message.status == OK_WAIT_FOR_RESPONSE && (int) recv_message.length > 0) 
                 {

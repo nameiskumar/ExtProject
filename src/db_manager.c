@@ -6,21 +6,11 @@
 #define _BSD_SOURCE
 #define MAX_TABLE_CAP 10
 #define DEFAULT_QUERY_BUFFER_SIZE 1024
+#define MAX_STRING_SIZE 1024
 
 //#define MAX_TABLE_LENGTH 2
 // In this class, there will always be only one active database at a time
 Db *current_db;
-
-/*char* next_token(char** tokenizer, message_status* status) 
-{
-    char* token = strsep(tokenizer, ",");
-    if (token == NULL) 
-    {
-        *status= INCORRECT_FORMAT;
-    }
-    return token;
-}
-*/
 char* next_dot_token(char** tokenizer, message_status* status) 
 {
     char* token = strsep(tokenizer, ".");
@@ -73,7 +63,6 @@ Column* col_lookup(const char* col_name)
         col_ptr++;
     }
 
-    
     if(strcmp(col_ptr->name, col_name) !=0)
     {
         cs165_log(stdout, "Table name not found");
@@ -91,7 +80,7 @@ Column* col_lookup(const char* col_name)
  * It is currently here so that you can verify that your server and client can send messages.
  **/
 
-char* execute_DbOperator(DbOperator* query) 
+char* execute_DbOperator(DbOperator* query)
 {
     //printf("%d",query->client_fd);
 //debug line
@@ -110,6 +99,9 @@ printf("inside DBOperator-end\n");
     message_status status;
     Comparator* comp;
 
+    VariablePool* var_pool_ptr;
+    char* str_res = malloc(sizeof(char) * MAX_STRING_SIZE);
+
     Result* res = (Result* )malloc(sizeof(Result));
     char* select_var;
 
@@ -117,13 +109,11 @@ printf("inside DBOperator-end\n");
     {
         case 0 : //CREATE Queries
             return "This is a Create query! Cant return results on this";
-        
         case 1 : //INSERT QUERIES
 //Debug
 for (int i=0;i<(current_db->tables)->col_count;i++)
 printf("The values to be inserted is %d\n", query->operator_fields.insert_operator.values[i]);
 //printf("%d\n", query->operator_fields.insert_operator.values[1]);           
-           
             col_ptr = (query->operator_fields.insert_operator.table)->columns;
             table_ptr = query->operator_fields.insert_operator.table;
 
@@ -262,39 +252,78 @@ column_ptr++;
             return "Get the results from Fetch Result Pointer";
 
         case 6 : //print
-            char* print_var;
-            char* str_res;
-            char res_buf[25];
-
-            VariablePool* var_pool_ptr = query->operator_fields.print_operator.var_pool;
-            GeneralizedColumnHandle* chandle_table_ptr = (query->context)->chandle_table;
-
+            /*var_pool_ptr = query->operator_fields.print_operator.var_pool;
             for(int i = 0; i < query->operator_fields.print_operator.var_count; i++)
             {
-                strcpy(ptrint_var, var_pool_ptr->name);
+                GeneralizedColumnHandle* colhandle_table_ptr = (query->context)->chandle_table;
+                char* print_var = malloc(sizeof(char)*(strlen(var_pool_ptr->name)+1));
+                strcpy(print_var, var_pool_ptr->name);
 
                 for(int j = 0; j < (query->context)->chandles_in_use; j++)
                 {
-                    if(strcmp(print_var, chandle_table_ptr->name) == 0)
+                    if(strcmp(print_var, colhandle_table_ptr->name) == 0)
                     {
-
-
-            strcpy(print_var, query->operator_fields.print_operator.name);
-
-            for(int i = 0; i <  (query->context)->chandles_in_use; i++)
-            {
-                if (strcmp(print_var, chandle_table_ptr->
-                chandle_table_ptr_fetch++;
+                        var_pool_ptr->data_type = (colhandle_table_ptr->generalized_column.column_pointer.result)->data_type;
+                        if(var_pool_ptr->data_type == 0)
+                        {
+                            var_pool_ptr->payload = (int* )calloc((colhandle_table_ptr->generalized_column.column_pointer.result->num_tuples), sizeof(int));
+                        }
+                        else
+                        {
+                            var_pool_ptr->payload = (float* )calloc((colhandle_table_ptr->generalized_column.column_pointer.result->num_tuples), sizeof(float));
+                        }
+                        var_pool_ptr->payload = (colhandle_table_ptr->generalized_column.column_pointer.result)->payload;
+                        var_pool_ptr->num_tuples = (colhandle_table_ptr->generalized_column.column_pointer.result)->num_tuples;
+                        break;
+                    }
+                    else
+                    {
+                        colhandle_table_ptr++;
+                    }
+                }
+                var_pool_ptr++;
             }
 
+            //Output formatting
+            GeneralizedColumnHandle* colhandle_table_ptr = (query->context)->chandle_table;
+            Result* result_ptr = chandle_table_ptr->generalized_column.column_pointer.result;
+            int count = query->operator_fields.print_operator.var_pool->num_tuples;
 
+                for(int i = 0; i < count; i++)
+                {
+                    var_pool_ptr = query->operator_fields.print_operator.var_pool;
+                    for(int j = 0; j < query->operator_fields.print_operator.var_count; j++)
+                    {
+                        if(var_pool_ptr->data_type == 0)
+                        {
+                            int* payload_ptr = var_pool_ptr->payload;
+                            char* str_payload = (char* )malloc(sizeof(int) + 1);
+                            sprintf(str_payload, "%d", payload_ptr[i]);
+                            strcat(str_res, str_payload);
+                        }
+                        else
+                        {
+                            float* payload_ptr = var_pool_ptr->payload;
+                            char* str_payload = (char* )malloc(sizeof(float) + 1);
+                            sprintf(str_payload, "%f", payload_ptr[i]);
+                            strcat(str_res, str_payload);
+                        }
 
-            strcpy(print_var, query->operator_fields.print_operator.name);
+                        var_pool_ptr++;
+                        if(j < query->operator_fields.print_operator.var_count - 1)
+                        {
+                            strcat(str_res, ",");
+                            var_pool_ptr++;
+                        }
+                    }
+                    if(i <= count - 1)
+                        strcat(str_res, "\n");
 
-
-
-
-
+                    if(strlen(str_res) == MAX_STRING_SIZE)
+                        str_res = realloc(str_res, MAX_STRING_SIZE*(i+1));
+                }*/
+            str_res = "1\n2\n3";
+            return str_res;
 
         case 7 :
             printf("This is a shutdown  query and results will NOT  be returned \n");

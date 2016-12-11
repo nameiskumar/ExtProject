@@ -395,8 +395,7 @@ printf("%s\n", query_command);
 
 DbOperator* parse_print(char* query_command, char* handle, int client_socket, ClientContext* context, message* send_message)
 {
-    send_message->status = OK_WAIT_FOR_RESPONSE;
-    if(strncmp(query_command, "(", 1) == 0)
+/*    if(strncmp(query_command, "(", 1) == 0)
     {
         query_command++;
     }
@@ -433,7 +432,9 @@ DbOperator* parse_print(char* query_command, char* handle, int client_socket, Cl
 
         var_name = next_token(query_command_index, &(send_message->status));
     }
-
+*/
+    DbOperator* dbo = malloc(sizeof(DbOperator));
+    send_message->status = OK_WAIT_FOR_RESPONSE;
     dbo->context = context;
 
 return dbo;

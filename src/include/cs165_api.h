@@ -277,23 +277,24 @@ typedef struct FetchOperator
     Table* table;
     Column* column;
     char select_handle_name[HANDLE_MAX_SIZE];
-
 } FetchOperator;
 
 typedef struct VariablePool
 {
     char name[HANDLE_MAX_SIZE];
-
+    DataType data_type;
+    void* payload;
+    int num_tuples;
 } VariablePool;
 
 typedef struct PrintOperator
 {
     int var_count;
     VariablePool* var_pool;
-
 } PrintOperator;
 
-typedef struct OpenOperator {
+typedef struct OpenOperator
+{
     char* db_name;
 } OpenOperator;
 

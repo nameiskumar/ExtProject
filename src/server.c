@@ -81,27 +81,27 @@ LoadFile* loadfile_ptr = lf;
     // 2. Handle request if appropriate
     // 3. Send status of the received message (OK, UNKNOWN_QUERY, etc)
     // 4. Send response of request.
-    do 
+    do
     {
-      
         length = recv(client_socket, &recv_message, sizeof(message), 0);
-        if (length < 0) 
+        if (length < 0)
         {
             log_err("Client connection closed!\n");
             exit(1);
-        } 
-      
-        else if (length == 0) 
-        {
-            done = 1;
         }
-        if (!done) 
+
+        else if (length == 0)
+        {
+            //done = 1;
+            continue;
+        }
+        if (!done)
         {
             char recv_buffer[recv_message.length];
             length = recv(client_socket, recv_buffer, recv_message.length,0);
             recv_message.payload = recv_buffer;
             recv_message.payload[recv_message.length] = '\0';
-            
+
             char* result;
 //Debug line-> commenting out for test run
 //printf("Received msg at the server is %s\n", recv_message.payload);
@@ -117,9 +117,13 @@ LoadFile* loadfile_ptr = lf;
 
                     dbo->client_fd = client_socket;
                     dbo->type = LOAD;
-                
                     load_insert(dbo, &send_message, loadfile_ptr);
                     result = "Loaded......";
+                    //new code
+                    send_message.length = strlen(result);
+                    send_message.status = OK_DONE;
+                    send(client_socket, &(send_message), sizeof(message), 0);
+                    send(client_socket, result, send_message.length, 0);
                 }
 
                 else
@@ -133,31 +137,31 @@ LoadFile* loadfile_ptr = lf;
 
             else
             {
-            // 1. Parse command
+                // 1. Parse command
                 DbOperator* query = parse_command(recv_message.payload, &send_message, client_socket, client_context);
 
                 // 2. Handle request
                 result = execute_DbOperator(query);
-                //(client_context->chandle_table)->generalized_column.column_type = RESULT;
-                //(client_context->chandle_table)->generalized_column.column_pointer.result = execute_DbOperator(query);
+                send_message.length = strlen(result);
 
-                //client_context->chandle_table++;
-            }
+                // 3. Send status of the received message (OK, UNKNOWN_QUERY, etc)
+                if (send(client_socket, &(send_message), sizeof(message), 0) == -1)
+                {
+                    log_err("Failed to send message.");
+                    exit(1);
+                }
 
-            send_message.length = strlen(result);
+                // 4. Send response of request
+                if (send(client_socket, result, send_message.length, 0) == -1)
+                {
+                    log_err("Failed to send message.");
+                    exit(1);
+                }
 
-            // 3. Send status of the received message (OK, UNKNOWN_QUERY, etc)
-            if (send(client_socket, &(send_message), sizeof(message), 0) == -1) 
-            {
-                log_err("Failed to send message.");
-                exit(1);
-            }
-
-            // 4. Send response of request
-            if (send(client_socket, result, send_message.length, 0) == -1) 
-            {
-                log_err("Failed to send message.");
-                exit(1);
+                if(strcmp(result, "shutdown") == 0)
+                {
+                    exit(1);
+                }
             }
         }
     } while (!done);

@@ -395,7 +395,7 @@ printf("%s\n", query_command);
 
 DbOperator* parse_print(char* query_command, char* handle, int client_socket, ClientContext* context, message* send_message)
 {
-/*    if(strncmp(query_command, "(", 1) == 0)
+    if(strncmp(query_command, "(", 1) == 0)
     {
         query_command++;
     }
@@ -432,8 +432,8 @@ DbOperator* parse_print(char* query_command, char* handle, int client_socket, Cl
 
         var_name = next_token(query_command_index, &(send_message->status));
     }
-*/
-    DbOperator* dbo = malloc(sizeof(DbOperator));
+
+//    DbOperator* dbo = malloc(sizeof(DbOperator));
     send_message->status = OK_WAIT_FOR_RESPONSE;
     dbo->context = context;
 
@@ -483,7 +483,10 @@ DbOperator* parse_fetch(char* query_command, char* handle, int client_socket, Cl
     char* col_name = db_object;
 
     Table* tbl_ptr = lookup(tbl_name);
-    Column* col_ptr = col_lookup(col_name);
+    Column* col_ptr = tbl_ptr->columns;
+    while((strcmp(col_ptr->name, col_name) != 0))
+        col_ptr++;
+    //Column* col_ptr = col_lookup(col_name);
 
     DbOperator* dbo = malloc(sizeof(DbOperator));
     dbo->type = FETCH;
@@ -598,10 +601,17 @@ printf("the col_name is %s \n", col_name);
         comp->p_low = atoi(lower_bound);
         comp->p_high = atoi(upper_bound);
     }
-    
     Table* tbl_ptr = lookup(table_name);
-    Column* col_ptr = col_lookup(col_name);
-    
+    Column* col_ptr = tbl_ptr->columns;
+    int j = 0;
+    while((strcmp(col_ptr->name, col_name) != 0))
+    {
+        j++;
+        if(j == tbl_ptr->col_count)
+            break;
+        col_ptr++;
+    }
+    //Column* col_ptr = col_lookup(col_name);
     DbOperator* dbo = malloc(sizeof(DbOperator));
     dbo->type = SELECT;
 
@@ -736,7 +746,7 @@ printf("inside pare_command fn when create is issued \n");
     {
         return dbo;
     }
-
+    send_message->status = OK_WAIT_FOR_RESPONSE;
     dbo->client_fd = client_socket;
     //dbo->context = context;
     return dbo;

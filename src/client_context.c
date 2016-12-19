@@ -1,6 +1,6 @@
 
 #include "client_context.h"
 
-Table* lookup_table(char *name) {
+/*Table* lookup(const char *name) {
 	return NULL;
-}
+}*/

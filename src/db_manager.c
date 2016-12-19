@@ -11,10 +11,10 @@
 //#define MAX_TABLE_LENGTH 2
 // In this class, there will always be only one active database at a time
 Db *current_db;
-char* next_dot_token(char** tokenizer, message_status* status) 
+char* next_dot_token(char** tokenizer, message_status* status)
 {
     char* token = strsep(tokenizer, ".");
-    if (token == NULL) 
+    if (token == NULL)
     {
         *status= INCORRECT_FORMAT;
     }
@@ -24,13 +24,13 @@ char* next_dot_token(char** tokenizer, message_status* status)
 Table* lookup(const char* tbl_name)
 {
 //Debug
-printf("********in lookup fn\n");
-printf("the value of table in lookup fn is ***%s\n", tbl_name);
+//printf("********in lookup fn\n");
+//printf("the value of table in lookup fn is ***%s\n", tbl_name);
 
     Table* table_ptr = current_db->tables;
-    int count = 0;
+    size_t count = 0;
 //Debug
-printf("inside lookup the value of table_ptr->name and tbl_name is %s%s****** \n", table_ptr->name,tbl_name);
+//printf("inside lookup the value of table_ptr->name and tbl_name is %s%s****** \n", table_ptr->name,tbl_name);
     while(strcmp(table_ptr->name,tbl_name) != 0)
     {
         count++;
@@ -51,7 +51,7 @@ printf("inside lookup the value of table_ptr->name and tbl_name is %s%s****** \n
 Column* col_lookup(const char* col_name)
 {
     Column* col_ptr = (current_db->tables)->columns;
-    int count = 0;
+    size_t count = 0;
 
     while(strcmp(col_ptr->name, col_name) != 0)
     {
@@ -89,10 +89,10 @@ char* execute_DbOperator(DbOperator* query)
         return "This is either a comment or an unsupported query";
     }
 
-printf("The value in the query is %d\n", query);
-printf("inside DBOperator-start\n");
-printf("The query type is %d\n", query->type);
-printf("inside DBOperator-end\n");
+//printf("The value in the query is %d\n", query);
+//printf("inside DBOperator-start\n");
+//printf("The query type is %d\n", query->type);
+//printf("inside DBOperator-end\n");
 
     Table* table_ptr;
     Column* col_ptr;
@@ -105,14 +105,19 @@ printf("inside DBOperator-end\n");
     Result* res = (Result* )malloc(sizeof(Result));
     char* select_var;
 
+    GeneralizedColumnHandle* colhandle_table_ptr;
+    GeneralizedColumnHandle gc_handle;
+
+    Status synch_status;
+
     switch(query->type)
     {
         case 0 : //CREATE Queries
             return "This is a Create query! Cant return results on this";
         case 1 : //INSERT QUERIES
 //Debug
-for (int i=0;i<(current_db->tables)->col_count;i++)
-printf("The values to be inserted is %d\n", query->operator_fields.insert_operator.values[i]);
+for (size_t i = 0; i < (current_db->tables)->col_count; i++)
+//printf("The values to be inserted is %d\n", query->operator_fields.insert_operator.values[i]);
 //printf("%d\n", query->operator_fields.insert_operator.values[1]);           
             col_ptr = (query->operator_fields.insert_operator.table)->columns;
             table_ptr = query->operator_fields.insert_operator.table;
@@ -138,10 +143,6 @@ printf("The values to be inserted is %d\n", query->operator_fields.insert_operat
                     {
                         (col_ptr->data) = temp;
                     }
-                    else
-                    {
-                        printf("could not reallocate and value of temp is %u\n",temp);
-                    }
                     col_ptr++;
                 }
             }
@@ -153,26 +154,13 @@ printf("The values to be inserted is %d\n", query->operator_fields.insert_operat
                 col_ptr++;
 
 //Debug
-printf("data position value %d \n", (table_ptr->data_pos));
+//printf("data position value %d \n", (table_ptr->data_pos));
 //printf("value inserted at this point is %d \n", (col_ptr)->data[table_ptr->data_pos]);
             }
 
             (table_ptr->data_pos)++;
-//debug
-printf("data position value after increment %d \n", (table_ptr->data_pos));
 Column *column_ptr = (current_db->tables)->columns;
 
-//Debug printing
-/*
-for (int j=0;j<(current_db->tables)->col_count;j++)
-{
-for (int i=0;i<(current_db->tables)->data_pos;i++)
-{
-printf("Inserted values are %d\n",(column_ptr)->data[i]);
-}
-column_ptr++;
-}
-*/
             return "Data inserted successfully";
 
         case 4 : //SELECTS
@@ -189,7 +177,7 @@ column_ptr++;
 
             res_ptr->payload = (int* )malloc(sizeof(int) * table_ptr->table_length);
 
-            for (int i = 0; i < (table_ptr->data_pos); i++)
+            for (size_t i = 0; i < (table_ptr->data_pos); i++)
             {
                 if(col_ptr->data[i] < comp->p_high && col_ptr->data[i] >= comp->p_low)
                 {
@@ -205,11 +193,11 @@ column_ptr++;
 
             chandle_table_ptr->generalized_column.column_pointer.result = res_ptr;
 
-            printf("This is select query and results will be returned \n");
+            //printf("This is select query and results will be returned \n");
             return "Get the results from Select Result Pointer";
 
         case 3 : //LOADS
-            printf("This is a load  query and results will NOT  be returned \n");
+            //printf("This is a load  query and results will NOT  be returned \n");
             //free(query);
 
         case 5 : //fetch
@@ -235,7 +223,7 @@ column_ptr++;
             fetch_res->payload = (int *) malloc(sizeof(int) * res->num_tuples);
             fetch_res->num_tuples = res->num_tuples;
 
-            for(int i = 0; i < res->num_tuples; i++)
+            for(size_t i = 0; i < res->num_tuples; i++)
             {
                 fetch_res->payload[i] = col_ptr->data[res->payload[i]];
             }
@@ -255,30 +243,27 @@ column_ptr++;
             var_pool_ptr = query->operator_fields.print_operator.var_pool;
             for(int i = 0; i < query->operator_fields.print_operator.var_count; i++)
             {
-                GeneralizedColumnHandle* colhandle_table_ptr = (query->context)->chandle_table;
                 char* print_var = malloc(sizeof(char)*(strlen(var_pool_ptr->name)+1));
                 strcpy(print_var, var_pool_ptr->name);
+                ClientContext* cc_ptr = query->context;
 
-                for(int j = 0; j < (query->context)->chandles_in_use; j++)
+                for(int j = ((query->context)->chandles_in_use) - 1; j >= 0; j--)
                 {
-                    if(strcmp(print_var, colhandle_table_ptr->name) == 0)
+                    gc_handle = cc_ptr->chandle_table[j];
+                    if(strcmp(print_var, gc_handle.name) == 0)
                     {
-                        var_pool_ptr->data_type = (colhandle_table_ptr->generalized_column.column_pointer.result)->data_type;
+                        var_pool_ptr->data_type = (gc_handle.generalized_column.column_pointer.result)->data_type;
                         if(var_pool_ptr->data_type == 0)
                         {
-                            var_pool_ptr->payload = (int* )calloc((colhandle_table_ptr->generalized_column.column_pointer.result->num_tuples), sizeof(int));
+                            var_pool_ptr->payload = (int* )calloc((gc_handle.generalized_column.column_pointer.result->num_tuples), sizeof(int));
                         }
                         else
                         {
-                            var_pool_ptr->payload = (float* )calloc((colhandle_table_ptr->generalized_column.column_pointer.result->num_tuples), sizeof(float));
+                            var_pool_ptr->payload = (float* )calloc((gc_handle.generalized_column.column_pointer.result->num_tuples), sizeof(float));
                         }
-                        var_pool_ptr->payload = (colhandle_table_ptr->generalized_column.column_pointer.result)->payload;
-                        var_pool_ptr->num_tuples = (colhandle_table_ptr->generalized_column.column_pointer.result)->num_tuples;
+                        var_pool_ptr->payload = (gc_handle.generalized_column.column_pointer.result)->payload;
+                        var_pool_ptr->num_tuples = (gc_handle.generalized_column.column_pointer.result)->num_tuples;
                         break;
-                    }
-                    else
-                    {
-                        colhandle_table_ptr++;
                     }
                 }
                 var_pool_ptr++;
@@ -316,7 +301,7 @@ column_ptr++;
                             var_pool_ptr++;
                         }
                     }
-                    if(i <= count - 1)
+                    if(i < count - 1)
                         strcat(str_res, "\n");
 
                     if(strlen(str_res) == MAX_STRING_SIZE)
@@ -326,8 +311,8 @@ column_ptr++;
             return str_res;
 
         case 7 :
-            printf("shutdown");
-            Status synch_status = sync_db(current_db);
+            //printf("shutdown");
+            synch_status = sync_db(current_db);
             return "shutdown";
 
         default : //EVERYTHING ELSE
@@ -339,66 +324,12 @@ column_ptr++;
 
 //end of execute DB
 
-
-/*Result* select_results(char* db_name, char* table_name, char* col_name, char* lower_bound, char* upper_bound)
-{
-
-//Debug
-printf("the lower bd is %s \n", lower_bound);
-printf("the upper bd is %s \n", upper_bound);
-//printf("the db obj is %s \n", db_object);
-
-
-    Comparator* comp = (Comparator* )malloc(sizeof(Comparator));
-
-    if(strcmp(lower_bound, "null") == 0)
-    {
-        comp->p_low = -2147483648;
-        comp->p_high = atoi(upper_bound);
-        comp->type1 = LESS_THAN;
-    }
-
-    else if(strcmp(upper_bound, "null") == 0)
-    {
-        comp->p_high = 2147483647;
-        comp->p_low = atoi(lower_bound);
-        comp->type1 = GREATER_THAN_OR_EQUAL;
-    }
-
-    else
-    {
-        comp->p_low = atoi(lower_bound);
-        comp->p_high = atoi(upper_bound);
-    }
-    
-    Table* tbl_ptr = lookup(table_name);
-    Column* col_ptr = col_lookup(col_name);
-    Result* res_ptr = (Result* )malloc(sizeof(Result));
-
-    res_ptr->data_type = INT;
-    res_ptr->num_tuples = 0;
-    
-    res_ptr->payload = (int* )malloc(sizeof(int) * tbl_ptr->table_length);
-
-    for (int i=0; i<(tbl_ptr->data_pos); i++)
-    {
-        if(col_ptr->data[i] < comp->p_high && col_ptr->data[i] >= comp->p_low)
-        {
-            res_ptr->payload[res_ptr->num_tuples] = i;
-            res_ptr->num_tuples++;
-        }
-    }
-
-return res_ptr;   
-}
-*/
-
 Column* create_column(const char* column_name, char* table_name, bool sorted, Status *ret_status)
 {
 //Debug
-printf("*********in create column fn******\n");
-printf("column name inside create col fn is ***********%s\n", column_name);
-printf("table  name inside create column fn is ***********%s\n", table_name);
+//printf("*********in create column fn******\n");
+//printf("column name inside create col fn is ***********%s\n", column_name);
+//printf("table  name inside create column fn is ***********%s\n", table_name);
 
     Table* table_ptr = lookup(table_name);
     table_ptr->columns_size++;
@@ -436,10 +367,10 @@ printf("table  name inside create column fn is ***********%s\n", table_name);
     
     ret_status->code = OK;
 
-    printf("$$$$$$$$$$$$$$$$$$$printing col_ptr before returning$$$$$$$$$$\n");
-    printf("col_ptr is %u\n",col_ptr);
-    printf("$$$$$$$$$$$$$$$$$$$printing col_ptr->name$$$$$$$$$$$$$$$$%s\n",col_ptr->name);
-    printf("$$$$$$$$$$$$$$$$$$$printing col_name$$$$$$$$$$$$$$$$%s\n",column_name);
+    //printf("$$$$$$$$$$$$$$$$$$$printing col_ptr before returning$$$$$$$$$$\n");
+    //printf("col_ptr is %u\n",col_ptr);
+    //printf("$$$$$$$$$$$$$$$$$$$printing col_ptr->name$$$$$$$$$$$$$$$$%s\n",col_ptr->name);
+    //printf("$$$$$$$$$$$$$$$$$$$printing col_name$$$$$$$$$$$$$$$$%s\n",column_name);
 
     return col_ptr;
 }
@@ -448,8 +379,8 @@ printf("table  name inside create column fn is ***********%s\n", table_name);
 Table* create_table(Db* db, const char* name, size_t num_columns, Status *ret_status) 
 {
 //Debug line
-printf("Entering create table fn \n");
-printf("the table capacity is %zu", db->tables_capacity);
+//printf("Entering create table fn \n");
+//printf("the table capacity is %zu", db->tables_capacity);
 
     Table *table_ptr;
 
@@ -460,7 +391,7 @@ printf("the table capacity is %zu", db->tables_capacity);
     }
 
 //Debug line
-printf("Inside create table fn beyong NULL \n");
+//printf("Inside create table fn beyong NULL \n");
     db->tables_size++;
 
     if(db->tables == NULL)
@@ -487,8 +418,8 @@ printf("Inside create table fn beyong NULL \n");
     ret_status->code=OK;
 
 //Debug line
-printf("Table name is %s \n",table_ptr->name);
-printf("Table columns are %zu \n",table_ptr->col_count);
+//printf("Table name is %s \n",table_ptr->name);
+//printf("Table columns are %zu \n",table_ptr->col_count);
 
 	//return db->tables;
     return table_ptr;
@@ -498,7 +429,7 @@ Status add_db(const char* db_name, bool new)
 {
 	struct Status ret_status;
 //Debug line
-printf("Name of the DB is %s\n", db_name);
+//printf("Name of the DB is %s\n", db_name);
 
     current_db = (Db *)malloc(sizeof(Db)*1);
     //current_db->name = db_name;
@@ -507,7 +438,7 @@ printf("Name of the DB is %s\n", db_name);
     current_db->tables_size = 0;
     current_db->tables = NULL;
 //Debug line
-printf("Name of the DB in current_db pointer is  %s\n", current_db->name);
+//printf("Name of the DB in current_db pointer is  %s\n", current_db->name);
 
 	ret_status.code = OK;
 	return ret_status;
@@ -623,9 +554,9 @@ Status db_startup()
 
         tbl_ptr->data_pos = dbc_copy->obj_size;
 //debug
-printf("table pointer =%u\n", tbl_ptr);
-printf("tbl_ptr->data_pos=%d\n", tbl_ptr->data_pos);
-printf("dbc_copy->obj_size=%d\n", dbc_copy->obj_size);
+//printf("table pointer =%u\n", tbl_ptr);
+//printf("tbl_ptr->data_pos=%d\n", tbl_ptr->data_pos);
+//printf("dbc_copy->obj_size=%d\n", dbc_copy->obj_size);
     }
 
 return startup_status;

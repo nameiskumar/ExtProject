@@ -92,7 +92,6 @@ int connect_client() {
 
 message_status send_file_to_server(char* query_cmd, int client_socket)
 {
-    
     message_status mes_status = OK_DONE;
 
     if(strncmp(query_cmd, "(", 1) != 0)
@@ -117,40 +116,32 @@ message_status send_file_to_server(char* query_cmd, int client_socket)
     query_cmd = trim_quotes(query_cmd);
 
 //debug
-printf("the file path and name is %s", query_cmd);
+//printf("the file path and name is %s", query_cmd);
 
-    char* fs_name = (char* )malloc(DEFAULT_STDIN_BUFFER_SIZE); 
-    
+    char* fs_name = (char* )malloc(DEFAULT_STDIN_BUFFER_SIZE);
     strcpy(fs_name,query_cmd);
 
     char read_buffer[DEFAULT_STDIN_BUFFER_SIZE];
     message send_message;
     char *output_str = NULL;
-    //char* handle;
 
-    printf("[Client] Sending %s to the Server... ", fs_name);
-    
     FILE *fs = fopen(fs_name, "r");
-    
     if(fs == NULL)
     {
         printf("ERROR: File %s not found.\n", fs_name);
         exit(1);
     }
-    
     bzero(read_buffer, DEFAULT_STDIN_BUFFER_SIZE);
-   
     send_message.payload = read_buffer;
-    int load_file_count = 0;
+    //int load_file_count = 0;
 
     while (output_str = fgets(read_buffer, DEFAULT_STDIN_BUFFER_SIZE, fs), !feof(fs))
     {
-        
         send_message.length = strlen(read_buffer) + 4;
-        if (send_message.length > 1) 
+        if (send_message.length > 1)
         {
             // Send the message_header, which tells server payload size
-            if (send(client_socket, &(send_message), sizeof(message), 0) == -1) 
+            if (send(client_socket, &(send_message), sizeof(message), 0) == -1)
             {
                 log_err("Failed to send message header.");
                 exit(1);
@@ -161,9 +152,7 @@ printf("the file path and name is %s", query_cmd);
 
             strcat(str_buffer, send_message.payload);
             strcpy(send_message.payload, str_buffer);
-           
             send_message.payload = trim_newline(send_message.payload);
-            
             if (send(client_socket, send_message.payload, send_message.length, 0) == -1) 
             {
                 log_err("Failed to send query payload.");
@@ -223,7 +212,7 @@ int main(void)
     while (printf("%s", prefix), output_str = fgets(read_buffer, DEFAULT_STDIN_BUFFER_SIZE, stdin), !feof(stdin))
     {
  //debug
- printf("The payload from client is %s", output_str);
+ //printf("The payload from client is %s", output_str);
 
         if (output_str == NULL)
         {
@@ -300,17 +289,5 @@ int main(void)
         /*if (strncmp(send_message.payload, "shutdown", 8) != 0)
              continue;*/
     }
-//    close(client_socket);
-//debug
-
-/*while(1)
-{
-    //printf("in the while loop the value of the payload while exiting is %s", send_message.payload);
-    if (strncmp(send_message.payload, "shutdown", 8) == 0)
-         break;
-}*/
-//printf("client is now exiting");
-//printf("the value of the payload while exiting is %s", send_message.payload);
-
     return 0;
 }

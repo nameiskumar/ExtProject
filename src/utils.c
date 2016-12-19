@@ -74,8 +74,8 @@ char* trim_parenthesis(char *str) {
 
 char* trim_quotes(char *str) {
 //Debug line
-printf("inside trim quotes fn \n");
-printf("the value of db inside trim quotes start is %s \n",str);
+//printf("inside trim quotes fn \n");
+//printf("the value of db inside trim quotes start is %s \n",str);
     int length = strlen(str);
     int current = 0;
     for (int i = 0; i < length; ++i) {
@@ -87,7 +87,7 @@ printf("the value of db inside trim quotes start is %s \n",str);
     // Write new null terminator
     str[current] = '\0';
 //Debug line
-printf("the value of db inside trim quotes end is %s \n",str);
+//printf("the value of db inside trim quotes end is %s \n",str);
 
     return str;
 }

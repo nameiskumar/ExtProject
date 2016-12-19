@@ -33,7 +33,7 @@ char* next_token(char** tokenizer, message_status* status) {
 
 message_status parse_create_col(char* create_arguments)
 {
-    printf("Entering  parse_create_col fn \n");
+    //printf("Entering  parse_create_col fn \n");
     message_status status = OK_DONE;
     char** create_arguments_index = &create_arguments;
     char* column_name = next_token(create_arguments_index, &status);
@@ -42,9 +42,9 @@ message_status parse_create_col(char* create_arguments)
     column_name = trim_quotes(column_name);
 
 //Debug line
-printf("create args is *********%s\n", create_arguments);
-printf("db name is *******%s\n",db_name);
-printf("column name is ***********%s\n", column_name);
+//printf("create args is *********%s\n", create_arguments);
+//printf("db name is *******%s\n",db_name);
+//printf("column name is ***********%s\n", column_name);
 
     if (strcmp(current_db->name, db_name) != 0)
     {
@@ -59,9 +59,9 @@ printf("column name is ***********%s\n", column_name);
     int last_char = strlen(create_arguments) - 1;
 
 //Debug line
-printf("create args after len  is *********%s\n", create_arguments);
-printf("len of agrs-1 is ********%d\n",last_char);
-printf("the last char of create args is******%c\n", create_arguments[last_char]);
+//printf("create args after len  is *********%s\n", create_arguments);
+//printf("len of agrs-1 is ********%d\n",last_char);
+//printf("the last char of create args is******%c\n", create_arguments[last_char]);
 
     if (create_arguments[last_char] != ')')
     {
@@ -71,11 +71,11 @@ printf("the last char of create args is******%c\n", create_arguments[last_char])
     char* table_name = create_arguments;
 
 //Debug line
-printf("create args after last char made null is**** %s\n",create_arguments);
-printf("table name after last char made null is**** %s\n",table_name);
-printf("db name is *******%s\n",db_name);
-printf("column name is ***********%s\n", column_name);
-printf("the value of crrent_db and db_name are %s and %s********",current_db->name,db_name);
+//printf("create args after last char made null is**** %s\n",create_arguments);
+//printf("table name after last char made null is**** %s\n",table_name);
+//printf("db name is *******%s\n",db_name);
+//printf("column name is ***********%s\n", column_name);
+//printf("the value of crrent_db and db_name are %s and %s********",current_db->name,db_name);
     if (strcmp(current_db->name, db_name) != 0)
     {
         cs165_log(stdout, "query unsupported. Bad db name");
@@ -84,7 +84,7 @@ printf("the value of crrent_db and db_name are %s and %s********",current_db->na
 
     Status create_status;
 //Debug
-printf("table  name before calling create column fn is ***********%s\n", table_name);
+//printf("table  name before calling create column fn is ***********%s\n", table_name);
     Column* c_ptr = create_column(column_name, table_name, false, &create_status);
 
      if (create_status.code != OK) 
@@ -93,48 +93,6 @@ printf("table  name before calling create column fn is ***********%s\n", table_n
         return EXECUTION_ERROR;
      }
 
-//Debug line
-//Commenting out the debug code for testing
-/*
-Table* tbl_ptr;
-Column* col_ptr;
-tbl_ptr = current_db->tables;
-col_ptr = tbl_ptr->columns;
-
-if(tbl_ptr->columns_size == tbl_ptr->col_count)
-{
-printf("comparing c_ptr with col_ptr\n");
-printf("c_ptr is %u\n",c_ptr);
-printf("col_ptr is %u\n",col_ptr);
-
-printf("Here start the gist of the db created\n");
-printf("The DB is %s\n",current_db->name);
-printf("The Db->table_size is %d\n",current_db->tables_size);
-printf("The Db->table_capacity is %d\n",current_db->tables_capacity);
-printf("*************************\n");
-//Table* tbl_ptr;
-//Column* col_ptr;
-
-//tbl_ptr = current_db->tables;
-
-for(int i = 0; i < current_db->tables_size; i++)
-{
-    printf("tables are %s\n",tbl_ptr->name);
-    printf("table->col_count is %d\n",tbl_ptr->col_count);
-    printf("table->table_length is %d\n",tbl_ptr->table_length);
-    printf("table->columns_size is %d\n",tbl_ptr->columns_size);
-    printf("*************************\n");
-    col_ptr = tbl_ptr->columns;
-
-    for(int j=0; j < tbl_ptr->columns_size; j++)
-    {
-        printf("Columns are %s\n",col_ptr->name);
-        col_ptr++;
-    }
-    printf("*************************\n");
-    tbl_ptr++;
-}
-}*/
     return status;
 }
 
@@ -145,7 +103,7 @@ for(int i = 0; i < current_db->tables_size; i++)
 
 message_status parse_create_tbl(char* create_arguments) {
 //Debug line
-printf("Entering  parse_create_tbl fn \n");
+//printf("Entering  parse_create_tbl fn \n");
     message_status status = OK_DONE;
     char** create_arguments_index = &create_arguments;
     char* table_name = next_token(create_arguments_index, &status);
@@ -153,10 +111,10 @@ printf("Entering  parse_create_tbl fn \n");
     char* col_cnt = next_token(create_arguments_index, &status);
 
 //Debug line
-printf("message status is %d \n", status);
-printf("table name inside parse create tbl fn is is %s \n", table_name);
-printf("db name inside parse create tbl fn is is %s \n", db_name);
-printf("column cnt inside parse create tbl fn is is %s \n", col_cnt);
+//printf("message status is %d \n", status);
+//printf("table name inside parse create tbl fn is is %s \n", table_name);
+//printf("db name inside parse create tbl fn is is %s \n", db_name);
+//printf("column cnt inside parse create tbl fn is is %s \n", col_cnt);
 
     table_name = trim_quotes(table_name);
     // not enough arguments
@@ -173,8 +131,7 @@ printf("column cnt inside parse create tbl fn is is %s \n", col_cnt);
 
     // check that the database argument is the current active database
 //Debug line
-printf("Current Database name is %s \n", current_db->name);
-    
+//printf("Current Database name is %s \n", current_db->name);
     if (strcmp(current_db->name, db_name) != 0) {
         cs165_log(stdout, "query unsupported. Bad db name");
         return QUERY_UNSUPPORTED;
@@ -183,16 +140,16 @@ printf("Current Database name is %s \n", current_db->name);
 
     int column_cnt = atoi(col_cnt);
 //Debug line
-printf("Column Cnt is %d \n", column_cnt);
+//printf("Column Cnt is %d \n", column_cnt);
     if (column_cnt < 1) {
         return INCORRECT_FORMAT;
     }
     Status create_status;
 //Debug line
-printf("Going to call create table now");
+//printf("Going to call create table now");
     create_table(current_db, table_name, column_cnt, &create_status);
 //Debug line
-printf("message status code after callinf create table is  %d \n", create_status.code);
+//printf("message status code after callinf create table is  %d \n", create_status.code);
     if (create_status.code != OK) {
         cs165_log(stdout, "adding a table failed.");
         return EXECUTION_ERROR;
@@ -215,10 +172,10 @@ message_status parse_create_db(char* create_arguments) {
         // create the database with given name
         char* db_name = token;
 //Debug line
-printf("db name before trimming is %s \n", db_name);
+//printf("db name before trimming is %s \n", db_name);
         db_name = trim_quotes(db_name);
 //Debug line
-printf("db name after trimming is %s \n", db_name);
+//printf("db name after trimming is %s \n", db_name);
         int last_char = strlen(db_name) - 1;
         if (last_char < 0 || db_name[last_char] != ')') {
             return INCORRECT_FORMAT;
@@ -229,7 +186,7 @@ printf("db name after trimming is %s \n", db_name);
             return INCORRECT_FORMAT;
         }
 //Debug line
-printf("db name inside parse_create_db before calling add_db fn is %s \n", db_name);
+//printf("db name inside parse_create_db before calling add_db fn is %s \n", db_name);
         if (add_db(db_name, true).code == OK) {
             return OK_DONE;
         } else {
@@ -243,7 +200,7 @@ printf("db name inside parse_create_db before calling add_db fn is %s \n", db_na
  **/
 message_status parse_create(char* create_arguments) {
 //Debug Line
-printf("Entering parse_create fn \n");
+//printf("Entering parse_create fn \n");
 
     message_status mes_status;
     char *tokenizer_copy, *to_free;
@@ -259,14 +216,14 @@ printf("Entering parse_create fn \n");
         } else {
             if (strcmp(token, "db") == 0) {
 //Debug line
-printf("inside parse_create fn where token = db \n");
+//printf("inside parse_create fn where token = db \n");
                 mes_status = parse_create_db(tokenizer_copy);
             } else if (strcmp(token, "tbl") == 0) {
 //Debug line
-printf("inside parse_create fn where token = tbl \n");
-printf("the value of tokenizer copy is %s",tokenizer_copy);
+//printf("inside parse_create fn where token = tbl \n");
+//printf("the value of tokenizer copy is %s",tokenizer_copy);
                 mes_status = parse_create_tbl(tokenizer_copy);
-            } 
+            }
              else if (strcmp(token, "col") == 0) {
                 mes_status = parse_create_col(tokenizer_copy);
             }
@@ -300,7 +257,7 @@ DbOperator* parse_insert(char* query_command, message* send_message)
 
         table_name = trim_quotes(table_name);
 //Debug line
-printf("%s\n",table_name);
+//printf("%s\n",table_name);
 
         //char* db_name = strsep(create_arguments_index,".");
 
@@ -315,7 +272,7 @@ printf("%s\n",table_name);
             send_message->status = OBJECT_NOT_FOUND;
             return NULL;
         }
-        Column* col = insert_table->columns;
+        //Column* col = insert_table->columns;
         DbOperator* dbo = malloc(sizeof(DbOperator));
         dbo->type = INSERT;
         dbo->operator_fields.insert_operator.table = insert_table;
@@ -334,10 +291,10 @@ printf("%s\n",table_name);
             send_message->status = INCORRECT_FORMAT;
             free (dbo);
             return NULL;
-        } 
+        }
         return dbo;
-    } 
-    else 
+    }
+    else
     {
         send_message->status = UNKNOWN_COMMAND;
         return NULL;
@@ -352,16 +309,15 @@ printf("%s\n",table_name);
 DbOperator* parse_load(char* query_command, message* send_message)
 {
     if(strncmp(query_command, "(", 1) == 0)
-    {   
+    {
         query_command++;
     }
-    
     query_command = trim_newline(query_command);
     query_command = trim_whitespace(query_command);
 
     int last_char = strlen(query_command) - 1;
 
-    printf("Last char is %c \n", query_command[last_char]);
+    //printf("Last char is %c \n", query_command[last_char]);
 
     if (query_command[last_char] != ')')
     {
@@ -371,11 +327,11 @@ DbOperator* parse_load(char* query_command, message* send_message)
     query_command[last_char] = '\0';
 //char* load_file_copy = strsep(table_name_index, "/");
 //Debug 
-printf("%s\n", query_command);
+//printf("%s\n", query_command);
 
     query_command = trim_quotes(query_command);
 //debug
-printf("%s\n", query_command);
+//printf("%s\n", query_command);
 
     DbOperator* dbo = malloc(sizeof(DbOperator));
     dbo->type = LOAD;
@@ -540,46 +496,42 @@ DbOperator* parse_select(char* query_command, char* handle, int client_socket, C
     int last_char = strlen(query_command) - 1;
 
 //debug
-printf("Last char is %c \n", query_command[last_char]);
+//printf("Last char is %c \n", query_command[last_char]);
 
     if (query_command[last_char] != ')')
     {
         printf("INCORRECT_FORMAT");
         send_message->status = UNKNOWN_COMMAND;
     }
-    
     query_command[last_char] = '\0';
 //char* load_file_copy = strsep(table_name_index, "/");
 //Debug 
-printf("%s\n", query_command);
+//printf("%s\n", query_command);
 
     char** command_index = &query_command;
     char* db_object = next_token(command_index, &send_message->status);
-    
     //Range extraction
     command_index = &query_command;
     char* lower_bound = (next_token(command_index, &send_message->status));
     char* upper_bound = (query_command);
 
 //debug
-printf("the lower bd is %s \n", lower_bound);
-printf("the upper bd is %s \n", upper_bound);
-printf("the db obj is %s \n", db_object);
+//printf("the lower bd is %s \n", lower_bound);
+//printf("the upper bd is %s \n", upper_bound);
+//printf("the db obj is %s \n", db_object);
 
     char** db_object_index = &db_object;
     char* db_name = strsep(db_object_index, ".");
 
     db_object_index = &db_object;
-    
     char* table_name = strsep(db_object_index, ".");
     char* col_name = db_object;
 
 //debug
-printf("db name is %s \n", db_name);
-printf("the table name is %s \n", table_name);
-printf("the col_name is %s \n", col_name);
+//printf("db name is %s \n", db_name);
+//printf("the table name is %s \n", table_name);
+//printf("the col_name is %s \n", col_name);
 
-    
     Comparator* comp = (Comparator* )malloc(sizeof(Comparator));
 
     if(strcmp(lower_bound, "null") == 0)
@@ -603,7 +555,7 @@ printf("the col_name is %s \n", col_name);
     }
     Table* tbl_ptr = lookup(table_name);
     Column* col_ptr = tbl_ptr->columns;
-    int j = 0;
+    size_t j = 0;
     while((strcmp(col_ptr->name, col_name) != 0))
     {
         j++;
@@ -660,8 +612,9 @@ return dbo;
  * Returns a db_operator.
  **/
 
-DbOperator* parse_command(char* query_command, message* send_message, int client_socket, ClientContext* context) 
+DbOperator* parse_command(char* query_command, message* send_message, int client_socket, ClientContext* context)
 {
+    send_message->status = OK_DONE;
     DbOperator *dbo = NULL; // = malloc(sizeof(DbOperator)); // calloc?
 
     if (strncmp(query_command, "--", 2) == 0) 
@@ -695,7 +648,7 @@ DbOperator* parse_command(char* query_command, message* send_message, int client
         query_command += 6;
         dbo = parse_select(query_command, handle, client_socket, context, send_message);
 //debug
-printf("the variable is %s \n", handle);
+//printf("the variable is %s \n", handle);
 //printf("the query is  %s \n", query_command);
     }
    else if(strncmp(query_command, "fetch", 5) == 0)
@@ -718,7 +671,7 @@ printf("the variable is %s \n", handle);
         query_command += 6;
 
 //Debug line
-printf("inside pare_command fn when create is issued \n");
+//printf("inside pare_command fn when create is issued \n");
 
         send_message->status = parse_create(query_command);
         dbo = malloc(sizeof(DbOperator));
@@ -740,13 +693,14 @@ printf("inside pare_command fn when create is issued \n");
     {
         query_command += 5;
         dbo = parse_print(query_command, handle, client_socket, context, send_message);
+        send_message->status = OK_WAIT_FOR_RESPONSE;
     }
 
     if (dbo == NULL)
     {
         return dbo;
     }
-    send_message->status = OK_WAIT_FOR_RESPONSE;
+    //send_message->status = OK_WAIT_FOR_RESPONSE;
     dbo->client_fd = client_socket;
     //dbo->context = context;
     return dbo;

@@ -69,7 +69,7 @@ void handle_client(int client_socket) {
     init_client_context(client_context);
 
 //Debug
-int i = 0;
+//int i = 0;
 //LoadFile* lf = (LoadFile*) malloc(sizeof(LoadFile) * 1024);
 //lf->element = (char*) malloc(sizeof(char) * 100);
 
@@ -103,17 +103,13 @@ LoadFile* loadfile_ptr = lf;
             recv_message.payload[recv_message.length] = '\0';
 
             char* result;
-//Debug line-> commenting out for test run
-//printf("Received msg at the server is %s\n", recv_message.payload);
-//i++;
-//printf("i is now %d\n", i);
 
             if(strncmp(recv_message.payload, "load", 4) == 0)
             {
                 if(strncmp(recv_message.payload, "load File Load Complete", 23) == 0)
                 {
                     DbOperator* dbo = malloc(sizeof(DbOperator));
-                    struct Status mes_status;
+                    //struct Status mes_status;
 
                     dbo->client_fd = client_socket;
                     dbo->type = LOAD;

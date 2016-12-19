@@ -120,7 +120,7 @@ typedef struct Table {
     size_t col_count;
     size_t table_length;
     size_t columns_size;
-    int data_pos;
+    size_t data_pos;
 } Table;
 
 /**
@@ -355,9 +355,11 @@ Result* select_results(char* db_name, char* table_name, char* col_name, char* lo
 Status shutdown_server();
 Status shutdown_database(Db* db);
 
-char** execute_db_operator(DbOperator* query);
+char* execute_DbOperator(DbOperator* query);
 void db_operator_free(DbOperator* query);
 
+void load_insert(DbOperator* dbo, message* send_message, LoadFile* loadfile_ptr);
+Table*  lookup(const char* table_name);
 
 #endif /* CS165_H */
 

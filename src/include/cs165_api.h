@@ -240,7 +240,13 @@ typedef enum OperatorType {
     SELECT,
     FETCH,
     PRINT,
-    SHUTDOWN
+    SHUTDOWN,
+    MIN,
+    MAX,
+    AVG,
+    SUM,
+    ADD,
+    SUB
 } OperatorType;
 /*
  * necessary fields for insertion
@@ -298,6 +304,12 @@ typedef struct OpenOperator
     char* db_name;
 } OpenOperator;
 
+typedef struct MathOperator
+{
+    char name[HANDLE_MAX_SIZE];
+    Result* res_operand;
+} MathOperator;
+
 
 /*
  * union type holding the fields of any operator
@@ -310,6 +322,7 @@ typedef union OperatorFields {
     SelectOperator select_operator;
     FetchOperator fetch_operator;
     PrintOperator print_operator;
+    MathOperator math_operator;
 } OperatorFields;
 /*
  * DbOperator holds the following fields:

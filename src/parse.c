@@ -397,6 +397,81 @@ return dbo;
 }
 
 /**
+ * parse_math takes as input the send_message from the client and then
+ * parses it into the appropriate query. Stores into send_message the
+ * status to send back.
+ * Returns db operator
+ **/
+
+DbOperator* parse_math(char* query_command, char* handle, int client_socket, ClientContext* context, message* send_message)
+{
+    send_message->status = OK_DONE;
+    DbOperator* dbo = malloc(sizeof(DbOperator));
+    if(strncmp(query_command, "min(", 4) == 0)
+    {
+        query_command += 4;
+        dbo->type = MIN;
+    }
+    else if(strncmp(query_command, "max(", 4) == 0)
+    {
+        query_command += 4;
+        dbo->type = MAX;
+    }
+    else if(strncmp(query_command, "avg(", 4) == 0)
+    {
+        query_command += 4;
+        dbo->type = AVG;
+    }
+    else if(strncmp(query_command, "sum(", 4) == 0)
+    {
+        query_command += 4;
+        dbo->type = SUM;
+    }
+    else if(strncmp(query_command, "add(", 4) == 0)
+    {
+        query_command += 4;
+        dbo->type = ADD;
+    }
+    else if(strncmp(query_command, "sub(", 4) == 0)
+    {
+        query_command += 4;
+        dbo->type = SUB;
+    }
+
+    query_command = trim_newline(query_command);
+    query_command = trim_whitespace(query_command);
+
+    int last_char = strlen(query_command) - 1;
+    if (query_command[last_char] != ')')
+    {
+        printf("INCORRECT_FORMAT");
+        send_message->status = UNKNOWN_COMMAND;
+        return NULL;
+    }
+    query_command[last_char] = '\0';
+    char** command_index = &query_command;
+    char* math_operand = next_token(command_index, &send_message->status);
+    strcpy(dbo->operator_fields.math_operator.name, handle);
+
+    ClientContext* client_context = context;
+    GeneralizedColumnHandle* chandle_table_ptr = client_context->chandle_table;
+    int i = 0;
+    while(i != client_context->chandles_in_use)
+    {
+        if(strcmp(math_operand, chandle_table_ptr->name) == 0)
+        {
+            dbo->operator_fields.math_operator.res_operand = chandle_table_ptr->generalized_column.column_pointer.result;
+        }
+        chandle_table_ptr++;
+        i++;
+    }
+    strcpy((chandle_table_ptr)->name, handle);
+    client_context->chandles_in_use++;
+    dbo->context = client_context;
+return dbo;
+}
+
+/**
  * parse_fetch takes as input the send_message from the client and then
  * parses it into the appropriate query. Stores into send_message the
  * status to send back.
@@ -423,7 +498,6 @@ DbOperator* parse_fetch(char* query_command, char* handle, int client_socket, Cl
         send_message->status = UNKNOWN_COMMAND;
         return NULL;
     }
- 
     query_command[last_char] = '\0';
 
     char** command_index = &query_command;
@@ -651,10 +725,14 @@ DbOperator* parse_command(char* query_command, message* send_message, int client
 //printf("the variable is %s \n", handle);
 //printf("the query is  %s \n", query_command);
     }
-   else if(strncmp(query_command, "fetch", 5) == 0)
-   {
+    else if(strncmp(query_command, "fetch", 5) == 0)
+    {
         query_command += 5;
         dbo = parse_fetch(query_command, handle, client_socket, context, send_message);
+    }
+    else if((strncmp(query_command, "min(", 4) == 0) || (strncmp(query_command, "max(", 4) == 0) || (strncmp(query_command, "avg(", 4) == 0) || (strncmp(query_command, "sum(", 4) == 0) || (strncmp(query_command, "add(", 4) == 0) || (strncmp(query_command, "sub(", 4) == 0))
+    {
+        dbo = parse_math(query_command, handle, client_socket, context, send_message);
     }
     else
     {
@@ -682,20 +760,17 @@ DbOperator* parse_command(char* query_command, message* send_message, int client
         query_command += 17;
         dbo = parse_insert(query_command, send_message);
     }
-
     else if(strncmp(query_command, "shutdown", 8) == 0)
     {
         dbo = malloc(sizeof(DbOperator));
         dbo->type = SHUTDOWN;
     }
-
     else if(strncmp(query_command, "print", 5) == 0)
     {
         query_command += 5;
         dbo = parse_print(query_command, handle, client_socket, context, send_message);
         send_message->status = OK_WAIT_FOR_RESPONSE;
     }
-
     if (dbo == NULL)
     {
         return dbo;

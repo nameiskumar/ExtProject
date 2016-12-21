@@ -103,10 +103,12 @@ char* execute_DbOperator(DbOperator* query)
     char* str_res = malloc(sizeof(char) * MAX_STRING_SIZE);
 
     Result* res = (Result* )malloc(sizeof(Result));
-    char* select_var;
+    char* select_var = (char* )malloc(sizeof(char) * MAX_STRING_SIZE);
 
     GeneralizedColumnHandle* colhandle_table_ptr;
     GeneralizedColumnHandle gc_handle;
+
+    Result* min_res;
 
     Status synch_status;
 
@@ -314,6 +316,57 @@ Column *column_ptr = (current_db->tables)->columns;
             //printf("shutdown");
             synch_status = sync_db(current_db);
             return "shutdown";
+
+        case 8 ://min operations
+            min_res = malloc(sizeof(Result));
+            min_res->num_tuples = 1;
+            min_res->payload = (int *) malloc(sizeof(int) * min_res->num_tuples);
+            GeneralizedColumnHandle* chandle_table_ptr_min = (query->context)->chandle_table;
+            Result* operand_arr = query->operator_fields.math_operator.res_operand;
+            int min = operand_arr->payload[0];
+            int min_index = 0;
+            for(int i = 0; i < operand_arr->num_tuples; i++)
+            {
+                int flag = operand_arr->payload[i] < min;
+                min_index = i*flag + (1-flag)*min_index;
+                min = operand_arr->payload[min_index];
+            }
+            min_res->payload[0] = min;
+            for(int i = 0; i <  ((query->context)->chandles_in_use - 1); i++)
+            {
+                chandle_table_ptr_min++;
+            }
+            chandle_table_ptr_min->generalized_column.column_pointer.result = min_res;
+            chandle_table_ptr_min->generalized_column.column_pointer.result->data_type = INT;
+
+            return "Get the min value after issuing print command";
+
+        case 9 ://max operations
+            max_res = malloc(sizeof(Result));
+            max_res->num_tuples = 1;
+            max_res->payload = (int *) malloc(sizeof(int) * max_res->num_tuples);
+            GeneralizedColumnHandle* chandle_table_ptr_max = (query->context)->chandle_table;
+            Result* operand_arr = query->operator_fields.math_operator.res_operand;
+            int max = operand_arr->payload[0];
+            int max_index = 0;
+            for(int i = 0; i < operand_arr->num_tuples; i++)
+            {
+                int flag = operand_arr->payload[i] > max;
+                max_index = i*flag + (1-flag)*max_index;
+                max = operand_arr->payload[max_index];
+            }
+            max_res->payload[0] = max;
+            for(int i = 0; i <  ((query->context)->chandles_in_use - 1); i++)
+            {
+                chandle_table_ptr_max++;
+            }
+            chandle_table_ptr_max->generalized_column.column_pointer.result = max_res;
+            chandle_table_ptr_max->generalized_column.column_pointer.result->data_type = INT;
+
+            return "Get the min value after issuing print command";
+
+
+
 
         default : //EVERYTHING ELSE
             return "Hello 165";

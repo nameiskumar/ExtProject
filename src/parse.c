@@ -26,6 +26,17 @@ char* next_token(char** tokenizer, message_status* status) {
     }
     return token;
 }
+
+char* next_dot_token(char** tokenizer, message_status* status)
+{
+    char* token = strsep(tokenizer, ".");
+    if (token == NULL)
+    {
+        *status= INCORRECT_FORMAT;
+    }
+    return token;
+}
+
 /**
  * This method takes in a string representing the arguments to create a column.
  * It parses those arguments, checks that they are valid, and creates the coulmns.
@@ -407,37 +418,33 @@ DbOperator* parse_math(char* query_command, char* handle, int client_socket, Cli
 {
     send_message->status = OK_DONE;
     DbOperator* dbo = malloc(sizeof(DbOperator));
+
     if(strncmp(query_command, "min(", 4) == 0)
     {
-        query_command += 4;
-        dbo->type = MIN;
+        dbo->operator_fields.math_operator.type = MIN;
     }
     else if(strncmp(query_command, "max(", 4) == 0)
     {
-        query_command += 4;
-        dbo->type = MAX;
+        dbo->operator_fields.math_operator.type = MAX;
     }
     else if(strncmp(query_command, "avg(", 4) == 0)
     {
-        query_command += 4;
-        dbo->type = AVG;
+        dbo->operator_fields.math_operator.type = AVG;
     }
     else if(strncmp(query_command, "sum(", 4) == 0)
     {
-        query_command += 4;
-        dbo->type = SUM;
+        dbo->operator_fields.math_operator.type = SUM;
     }
     else if(strncmp(query_command, "add(", 4) == 0)
     {
-        query_command += 4;
-        dbo->type = ADD;
+        dbo->operator_fields.math_operator.type = ADD;
     }
     else if(strncmp(query_command, "sub(", 4) == 0)
     {
-        query_command += 4;
-        dbo->type = SUB;
+        dbo->operator_fields.math_operator.type = SUB;
     }
 
+    query_command += 4;
     query_command = trim_newline(query_command);
     query_command = trim_whitespace(query_command);
 
@@ -450,11 +457,22 @@ DbOperator* parse_math(char* query_command, char* handle, int client_socket, Cli
     }
     query_command[last_char] = '\0';
     char** command_index = &query_command;
-    char* math_operand = next_token(command_index, &send_message->status);
+    char* math_operand = next_dot_token(command_index, &send_message->status);
     strcpy(dbo->operator_fields.math_operator.name, handle);
 
     ClientContext* client_context = context;
     GeneralizedColumnHandle* chandle_table_ptr = client_context->chandle_table;
+    if(*command_index != NULL)
+    {
+        GeneralizedColumnHandle chandle_table_last = client_context->chandle_table[client_context->chandles_in_use];
+        Table* tbl_ptr = lookup(next_dot_token(command_index, &send_message->status));
+        char* col_name = next_dot_token(command_index, &send_message->status);
+        Column* col_ptr = tbl_ptr->columns;
+        while((strcmp(col_ptr->name, col_name) != 0))
+            col_ptr++;
+
+        chandle_table_last.generalized_column.column_pointer.column = col_ptr;
+    }
     int i = 0;
     while(i != client_context->chandles_in_use)
     {
@@ -467,7 +485,21 @@ DbOperator* parse_math(char* query_command, char* handle, int client_socket, Cli
     }
     strcpy((chandle_table_ptr)->name, handle);
     client_context->chandles_in_use++;
+
+    //For second type of avg a1 = avg(db1.tbl2.col1)
+    /*if(*command_index != NULL)
+    {
+        //char* db_ptr = next_dot_token(command_index, &send_message->status);
+        Table* tbl_ptr = lookup(next_dot_token(command_index, &send_message->status));
+        char* col_name = next_dot_token(command_index, &send_message->status);
+        Column* col_ptr = tbl_ptr->columns;
+        while((strcmp(col_ptr->name, col_name) != 0))
+            col_ptr++;
+
+        dbo->operator_fields.math_operator.res_operand->payload = col_ptr->data;
+    }*/
     dbo->context = client_context;
+    dbo->type = MATH;
 return dbo;
 }
 

@@ -2,16 +2,18 @@
 #include "utils.h"
 #include "message.h"
 #include <string.h>
-
+#include <assert.h>
 #define _BSD_SOURCE
 #define MAX_TABLE_CAP 10
 #define DEFAULT_QUERY_BUFFER_SIZE 1024
 #define MAX_STRING_SIZE 1024
 
+//static_assert(sizeof(float) == sizeof(void *));
+
 //#define MAX_TABLE_LENGTH 2
 // In this class, there will always be only one active database at a time
 Db *current_db;
-char* next_dot_token(char** tokenizer, message_status* status)
+/*char* next_dot_token(char** tokenizer, message_status* status)
 {
     char* token = strsep(tokenizer, ".");
     if (token == NULL)
@@ -19,7 +21,7 @@ char* next_dot_token(char** tokenizer, message_status* status)
         *status= INCORRECT_FORMAT;
     }
     return token;
-}
+}*/
 
 Table* lookup(const char* tbl_name)
 {
@@ -108,7 +110,7 @@ char* execute_DbOperator(DbOperator* query)
     GeneralizedColumnHandle* colhandle_table_ptr;
     GeneralizedColumnHandle gc_handle;
 
-    Result* min_res;
+    Result* math_res;
 
     Status synch_status;
 
@@ -178,12 +180,13 @@ Column *column_ptr = (current_db->tables)->columns;
             res_ptr->num_tuples = 0;
 
             res_ptr->payload = (int* )malloc(sizeof(int) * table_ptr->table_length);
+            int* pl_ptr = res_ptr->payload;
 
             for (size_t i = 0; i < (table_ptr->data_pos); i++)
             {
                 if(col_ptr->data[i] < comp->p_high && col_ptr->data[i] >= comp->p_low)
                 {
-                    res_ptr->payload[res_ptr->num_tuples] = i;
+                    pl_ptr[res_ptr->num_tuples] = i;
                     res_ptr->num_tuples++;
                 }
             }
@@ -194,6 +197,7 @@ Column *column_ptr = (current_db->tables)->columns;
             }
 
             chandle_table_ptr->generalized_column.column_pointer.result = res_ptr;
+            chandle_table_ptr->generalized_column.column_pointer.result->data_type = INT;
 
             //printf("This is select query and results will be returned \n");
             return "Get the results from Select Result Pointer";
@@ -214,7 +218,6 @@ Column *column_ptr = (current_db->tables)->columns;
                     res = chandle_table_ptr_fetch->generalized_column.column_pointer.result;
                     break;
                 }
-
                 else
                 {
                     chandle_table_ptr_fetch++;
@@ -222,12 +225,15 @@ Column *column_ptr = (current_db->tables)->columns;
             }
 
             Result* fetch_res = malloc(sizeof(Result));
-            fetch_res->payload = (int *) malloc(sizeof(int) * res->num_tuples);
+            fetch_res->data_type = INT;
+            fetch_res->payload = (int* )malloc(sizeof(int) * res->num_tuples);
+            int* fetch_pl_ptr = fetch_res->payload;
+            int* res_pl_ss = res->payload;
             fetch_res->num_tuples = res->num_tuples;
 
             for(size_t i = 0; i < res->num_tuples; i++)
             {
-                fetch_res->payload[i] = col_ptr->data[res->payload[i]];
+                fetch_pl_ptr[i] = col_ptr->data[res_pl_ss[i]];
             }
 
             chandle_table_ptr_fetch = (query->context)->chandle_table;
@@ -290,9 +296,10 @@ Column *column_ptr = (current_db->tables)->columns;
                         }
                         else
                         {
-                            float* payload_ptr = var_pool_ptr->payload;
+                            ExtractFloat ef;
+                            ef.vp = var_pool_ptr->payload;
                             char* str_payload = (char* )malloc(sizeof(float) + 1);
-                            sprintf(str_payload, "%f", payload_ptr[i]);
+                            sprintf(str_payload, "%.2f", ef.vf[0]);
                             strcat(str_res, str_payload);
                         }
 
@@ -317,31 +324,72 @@ Column *column_ptr = (current_db->tables)->columns;
             synch_status = sync_db(current_db);
             return "shutdown";
 
-        case 8 ://min operations
-            min_res = malloc(sizeof(Result));
-            min_res->num_tuples = 1;
-            min_res->payload = (int *) malloc(sizeof(int) * min_res->num_tuples);
-            GeneralizedColumnHandle* chandle_table_ptr_min = (query->context)->chandle_table;
+        case 8 ://math operations
+            math_res = malloc(sizeof(Result));
+            math_res->num_tuples = 1;
+            //math_res->payload = (int *) malloc(sizeof(int) * math_res->num_tuples);
+
+            MathOperatorType op_type = query->operator_fields.math_operator.type;
+            GeneralizedColumnHandle* chandle_table_ptr_math = (query->context)->chandle_table;
             Result* operand_arr = query->operator_fields.math_operator.res_operand;
-            int min = operand_arr->payload[0];
-            int min_index = 0;
-            for(int i = 0; i < operand_arr->num_tuples; i++)
-            {
-                int flag = operand_arr->payload[i] < min;
-                min_index = i*flag + (1-flag)*min_index;
-                min = operand_arr->payload[min_index];
-            }
-            min_res->payload[0] = min;
+            int* operand_pl_ptr = operand_arr->payload;
+
             for(int i = 0; i <  ((query->context)->chandles_in_use - 1); i++)
             {
-                chandle_table_ptr_min++;
+                chandle_table_ptr_math++;
             }
-            chandle_table_ptr_min->generalized_column.column_pointer.result = min_res;
-            chandle_table_ptr_min->generalized_column.column_pointer.result->data_type = INT;
+
+            if(op_type == 0)
+            {
+                math_res->payload = (int *) malloc(sizeof(int) * math_res->num_tuples);
+                int min = operand_pl_ptr[0];
+                int min_index = 0;
+                int* min_pl_ptr = math_res->payload;
+                for(int i = 0; i < operand_arr->num_tuples; i++)
+                {
+                    int flag = operand_pl_ptr[i] < min;
+                    min_index = i*flag + (1-flag)*min_index;
+                    min = operand_pl_ptr[min_index];
+                }
+                min_pl_ptr[0] = min;
+                chandle_table_ptr_math->generalized_column.column_pointer.result = math_res;
+                chandle_table_ptr_math->generalized_column.column_pointer.result->data_type = INT;
+            }
+            else if(op_type == 1)
+            {
+                math_res->payload = (int *) malloc(sizeof(int) * math_res->num_tuples);
+                int max = operand_pl_ptr[0];
+                int max_index = 0;
+                int* max_pl_ptr = math_res->payload;
+                for(int i = 0; i < operand_arr->num_tuples; i++)
+                {
+                    int flag = operand_pl_ptr[i] > max;
+                    max_index = i*flag + (1-flag)*max_index;
+                    max = operand_pl_ptr[max_index];
+                }
+                max_pl_ptr[0] = max;
+                chandle_table_ptr_math->generalized_column.column_pointer.result = math_res;
+                chandle_table_ptr_math->generalized_column.column_pointer.result->data_type = INT;
+            }
+            else if(op_type == 2)
+            {
+                math_res->payload = (float *) malloc(sizeof(float) * math_res->num_tuples);
+                float avg = operand_pl_ptr[0];
+                float* avg_pl_ptr = math_res->payload;
+                int sum = 0;
+                for(int i = 0; i < operand_arr->num_tuples; i++)
+                {
+                    sum += operand_pl_ptr[i];
+                }
+                avg = (float)sum/(operand_arr->num_tuples);
+                avg_pl_ptr[0] = avg;
+                chandle_table_ptr_math->generalized_column.column_pointer.result = math_res;
+                chandle_table_ptr_math->generalized_column.column_pointer.result->data_type = FLOAT;
+            }
 
             return "Get the min value after issuing print command";
 
-        case 9 ://max operations
+        /*case 9 ://max operations
             max_res = malloc(sizeof(Result));
             max_res->num_tuples = 1;
             max_res->payload = (int *) malloc(sizeof(int) * max_res->num_tuples);
@@ -364,7 +412,7 @@ Column *column_ptr = (current_db->tables)->columns;
             chandle_table_ptr_max->generalized_column.column_pointer.result->data_type = INT;
 
             return "Get the min value after issuing print command";
-
+*/
 
 
 

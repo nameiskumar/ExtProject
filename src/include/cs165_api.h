@@ -172,9 +172,16 @@ typedef enum ComparatorType {
 typedef struct Result {
     size_t num_tuples;
     DataType data_type;
-    //void *payload;
-    int* payload;
+    void *payload;
+    //int* payload;
 } Result;
+
+
+typedef union ExtractFloat
+{
+    float* vf;
+    void* vp;
+} ExtractFloat;
 
 /*
  * an enum which allows us to differentiate between columns and results
@@ -241,13 +248,18 @@ typedef enum OperatorType {
     FETCH,
     PRINT,
     SHUTDOWN,
+    MATH
+} OperatorType;
+
+typedef enum MathOperatorType
+{
     MIN,
     MAX,
     AVG,
     SUM,
     ADD,
     SUB
-} OperatorType;
+} MathOperatorType;
 /*
  * necessary fields for insertion
  */
@@ -307,6 +319,7 @@ typedef struct OpenOperator
 typedef struct MathOperator
 {
     char name[HANDLE_MAX_SIZE];
+    MathOperatorType type;
     Result* res_operand;
 } MathOperator;
 

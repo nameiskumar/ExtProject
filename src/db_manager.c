@@ -111,6 +111,7 @@ char* execute_DbOperator(DbOperator* query)
     GeneralizedColumnHandle gc_handle;
 
     Result* math_res;
+    Result* addsub_res;
 
     Status synch_status;
 
@@ -328,15 +329,28 @@ Column *column_ptr = (current_db->tables)->columns;
             math_res = malloc(sizeof(Result));
             math_res->num_tuples = 1;
             //math_res->payload = (int *) malloc(sizeof(int) * math_res->num_tuples);
-
-            MathOperatorType op_type = query->operator_fields.math_operator.type;
+            MathOperator math_op = query->operator_fields.math_operator;
+            MathOperatorType op_type = math_op.type;
             GeneralizedColumnHandle* chandle_table_ptr_math = (query->context)->chandle_table;
             Result* operand_arr = query->operator_fields.math_operator.res_operand;
-            int* operand_pl_ptr = operand_arr->payload;
+            Column* col_operand_arr = query->operator_fields.math_operator.col_operand;
 
             for(int i = 0; i <  ((query->context)->chandles_in_use - 1); i++)
             {
                 chandle_table_ptr_math++;
+            }
+
+            int* operand_pl_ptr;
+            int res_count;
+            if(chandle_table_ptr_math->generalized_column.column_type == 0)
+            {
+                operand_pl_ptr = operand_arr->payload;
+                res_count = operand_arr->num_tuples;
+            }
+            else if(chandle_table_ptr_math->generalized_column.column_type == 1)
+            {
+                operand_pl_ptr = col_operand_arr->data;
+                res_count = math_op.num_tuples;
             }
 
             if(op_type == 0)
@@ -345,7 +359,7 @@ Column *column_ptr = (current_db->tables)->columns;
                 int min = operand_pl_ptr[0];
                 int min_index = 0;
                 int* min_pl_ptr = math_res->payload;
-                for(int i = 0; i < operand_arr->num_tuples; i++)
+                for(int i = 0; i < res_count; i++)
                 {
                     int flag = operand_pl_ptr[i] < min;
                     min_index = i*flag + (1-flag)*min_index;
@@ -361,7 +375,7 @@ Column *column_ptr = (current_db->tables)->columns;
                 int max = operand_pl_ptr[0];
                 int max_index = 0;
                 int* max_pl_ptr = math_res->payload;
-                for(int i = 0; i < operand_arr->num_tuples; i++)
+                for(int i = 0; i < res_count; i++)
                 {
                     int flag = operand_pl_ptr[i] > max;
                     max_index = i*flag + (1-flag)*max_index;
@@ -377,44 +391,66 @@ Column *column_ptr = (current_db->tables)->columns;
                 float avg = operand_pl_ptr[0];
                 float* avg_pl_ptr = math_res->payload;
                 int sum = 0;
-                for(int i = 0; i < operand_arr->num_tuples; i++)
+                for(int i = 0; i < res_count; i++)
                 {
                     sum += operand_pl_ptr[i];
                 }
-                avg = (float)sum/(operand_arr->num_tuples);
+                avg = (float)sum/(res_count);
                 avg_pl_ptr[0] = avg;
                 chandle_table_ptr_math->generalized_column.column_pointer.result = math_res;
                 chandle_table_ptr_math->generalized_column.column_pointer.result->data_type = FLOAT;
             }
+            else if(op_type == 3)
+            {
+                math_res->payload = (int *) malloc(sizeof(int) * math_res->num_tuples);
+                int* sum_pl_ptr = math_res->payload;
+                int sum = 0;
+                for(int i = 0; i < res_count; i++)
+                {
+                    sum += operand_pl_ptr[i];
+                }
+                sum_pl_ptr[0] = sum;
+                chandle_table_ptr_math->generalized_column.column_pointer.result = math_res;
+                chandle_table_ptr_math->generalized_column.column_pointer.result->data_type = INT;
+            }
 
             return "Get the min value after issuing print command";
 
-        /*case 9 ://max operations
-            max_res = malloc(sizeof(Result));
-            max_res->num_tuples = 1;
-            max_res->payload = (int *) malloc(sizeof(int) * max_res->num_tuples);
-            GeneralizedColumnHandle* chandle_table_ptr_max = (query->context)->chandle_table;
-            Result* operand_arr = query->operator_fields.math_operator.res_operand;
-            int max = operand_arr->payload[0];
-            int max_index = 0;
-            for(int i = 0; i < operand_arr->num_tuples; i++)
-            {
-                int flag = operand_arr->payload[i] > max;
-                max_index = i*flag + (1-flag)*max_index;
-                max = operand_arr->payload[max_index];
-            }
-            max_res->payload[0] = max;
+        case 9 ://max operations
+            addsub_res = malloc(sizeof(Result));
+            addsub_res->num_tuples = query->operator_fields.addsub_operator.num_tuples;
+            addsub_res->payload = (int *) malloc(sizeof(int) * addsub_res->num_tuples);
+            GeneralizedColumnHandle* chandle_table_ptr_addsub = (query->context)->chandle_table;
+            Result* addsub_operand1 = query->operator_fields.addsub_operator.operand1;
+            int* operand1_pl_ptr = addsub_operand1->payload;
+            Result* addsub_operand2 = query->operator_fields.addsub_operator.operand2;
+            int* operand2_pl_ptr = addsub_operand2->payload;
+
+            int* addsub_pl_ptr = addsub_res->payload;
+            MathOperatorType opr_type = query->operator_fields.addsub_operator.type;
+
             for(int i = 0; i <  ((query->context)->chandles_in_use - 1); i++)
             {
-                chandle_table_ptr_max++;
+                chandle_table_ptr_addsub++;
             }
-            chandle_table_ptr_max->generalized_column.column_pointer.result = max_res;
-            chandle_table_ptr_max->generalized_column.column_pointer.result->data_type = INT;
+            if(opr_type == 4)
+            {
+                for(int i = 0; i < addsub_res->num_tuples; i++)
+                {
+                    addsub_pl_ptr[i] = operand1_pl_ptr[i] + operand2_pl_ptr[i];
+                }
+            }
+            else if(opr_type == 5)
+            {
+                for(int i = 0; i < addsub_res->num_tuples; i++)
+                {
+                    addsub_pl_ptr[i] = operand1_pl_ptr[i] - operand2_pl_ptr[i];
+                }
+            }
+            chandle_table_ptr_addsub->generalized_column.column_pointer.result = addsub_res;
+            chandle_table_ptr_addsub->generalized_column.column_pointer.result->data_type = INT;
 
             return "Get the min value after issuing print command";
-*/
-
-
 
         default : //EVERYTHING ELSE
             return "Hello 165";

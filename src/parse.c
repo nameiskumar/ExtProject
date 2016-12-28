@@ -407,6 +407,62 @@ DbOperator* parse_print(char* query_command, char* handle, int client_socket, Cl
 return dbo;
 }
 
+DbOperator* parse_addsub(char* query_command, char* handle, int client_socket, ClientContext* context, message* send_message)
+{
+    send_message->status = OK_DONE;
+    DbOperator* dbo = malloc(sizeof(DbOperator));
+
+    if(strncmp(query_command, "add(", 4) == 0)
+    {
+        dbo->operator_fields.addsub_operator.type = ADD;
+    }
+    else if(strncmp(query_command, "sub(", 4) == 0)
+    {
+        dbo->operator_fields.addsub_operator.type = SUB;
+    }
+    query_command += 4;
+    query_command = trim_newline(query_command);
+    query_command = trim_whitespace(query_command);
+
+    int last_char = strlen(query_command) - 1;
+    if (query_command[last_char] != ')')
+    {
+        printf("INCORRECT_FORMAT");
+        send_message->status = UNKNOWN_COMMAND;
+        return NULL;
+    }
+    query_command[last_char] = '\0';
+    char** command_index = &query_command;
+
+    char* math_operand1 = next_token(command_index, &send_message->status);
+    char* math_operand2 = next_token(command_index, &send_message->status);
+    strcpy(dbo->operator_fields.addsub_operator.name, handle);
+
+    ClientContext* client_context = context;
+    GeneralizedColumnHandle* chandle_table_ptr = client_context->chandle_table;
+    for(int i = 0; i < client_context->chandles_in_use; i++)
+    {
+        if(strcmp(math_operand1, chandle_table_ptr->name) == 0)
+        {
+            dbo->operator_fields.addsub_operator.operand1 = chandle_table_ptr->generalized_column.column_pointer.result;
+            dbo->operator_fields.addsub_operator.num_tuples = (chandle_table_ptr->generalized_column.column_pointer.result)->num_tuples;
+        }
+        if(strcmp(math_operand2, chandle_table_ptr->name) == 0)
+        {
+            dbo->operator_fields.addsub_operator.operand2 = chandle_table_ptr->generalized_column.column_pointer.result;
+        }
+        chandle_table_ptr++;
+    }
+    strcpy((chandle_table_ptr)->name, handle);
+    chandle_table_ptr->generalized_column.column_type = RESULT;
+
+    client_context->chandles_in_use++;
+    dbo->context = client_context;
+    dbo->type = ADDSUB;
+return dbo;
+}
+
+
 /**
  * parse_math takes as input the send_message from the client and then
  * parses it into the appropriate query. Stores into send_message the
@@ -435,14 +491,6 @@ DbOperator* parse_math(char* query_command, char* handle, int client_socket, Cli
     {
         dbo->operator_fields.math_operator.type = SUM;
     }
-    else if(strncmp(query_command, "add(", 4) == 0)
-    {
-        dbo->operator_fields.math_operator.type = ADD;
-    }
-    else if(strncmp(query_command, "sub(", 4) == 0)
-    {
-        dbo->operator_fields.math_operator.type = SUB;
-    }
 
     query_command += 4;
     query_command = trim_newline(query_command);
@@ -464,42 +512,36 @@ DbOperator* parse_math(char* query_command, char* handle, int client_socket, Cli
     GeneralizedColumnHandle* chandle_table_ptr = client_context->chandle_table;
     if(*command_index != NULL)
     {
-        GeneralizedColumnHandle chandle_table_last = client_context->chandle_table[client_context->chandles_in_use];
+        GeneralizedColumnHandle* chandle_table_last = &chandle_table_ptr[client_context->chandles_in_use];
         Table* tbl_ptr = lookup(next_dot_token(command_index, &send_message->status));
         char* col_name = next_dot_token(command_index, &send_message->status);
         Column* col_ptr = tbl_ptr->columns;
         while((strcmp(col_ptr->name, col_name) != 0))
             col_ptr++;
 
-        chandle_table_last.generalized_column.column_pointer.column = col_ptr;
+        dbo->operator_fields.math_operator.num_tuples = tbl_ptr->data_pos;
+        dbo->operator_fields.math_operator.col_operand = col_ptr;
+        chandle_table_last->generalized_column.column_type = COLUMN;
+        strcpy(chandle_table_last->name, handle);
     }
-    int i = 0;
-    while(i != client_context->chandles_in_use)
+    else
     {
-        if(strcmp(math_operand, chandle_table_ptr->name) == 0)
+        int i = 0;
+        while(i != client_context->chandles_in_use)
         {
-            dbo->operator_fields.math_operator.res_operand = chandle_table_ptr->generalized_column.column_pointer.result;
+            if(strcmp(math_operand, chandle_table_ptr->name) == 0)
+            {
+                dbo->operator_fields.math_operator.res_operand = chandle_table_ptr->generalized_column.column_pointer.result;
+            }
+            chandle_table_ptr++;
+            i++;
         }
-        chandle_table_ptr++;
-        i++;
+        strcpy((chandle_table_ptr)->name, handle);
+        chandle_table_ptr->generalized_column.column_type = RESULT;
     }
-    strcpy((chandle_table_ptr)->name, handle);
-    client_context->chandles_in_use++;
-
-    //For second type of avg a1 = avg(db1.tbl2.col1)
-    /*if(*command_index != NULL)
-    {
-        //char* db_ptr = next_dot_token(command_index, &send_message->status);
-        Table* tbl_ptr = lookup(next_dot_token(command_index, &send_message->status));
-        char* col_name = next_dot_token(command_index, &send_message->status);
-        Column* col_ptr = tbl_ptr->columns;
-        while((strcmp(col_ptr->name, col_name) != 0))
-            col_ptr++;
-
-        dbo->operator_fields.math_operator.res_operand->payload = col_ptr->data;
-    }*/
-    dbo->context = client_context;
-    dbo->type = MATH;
+        client_context->chandles_in_use++;
+        dbo->context = client_context;
+        dbo->type = MATH;
 return dbo;
 }
 
@@ -762,9 +804,13 @@ DbOperator* parse_command(char* query_command, message* send_message, int client
         query_command += 5;
         dbo = parse_fetch(query_command, handle, client_socket, context, send_message);
     }
-    else if((strncmp(query_command, "min(", 4) == 0) || (strncmp(query_command, "max(", 4) == 0) || (strncmp(query_command, "avg(", 4) == 0) || (strncmp(query_command, "sum(", 4) == 0) || (strncmp(query_command, "add(", 4) == 0) || (strncmp(query_command, "sub(", 4) == 0))
+    else if((strncmp(query_command, "min(", 4) == 0) || (strncmp(query_command, "max(", 4) == 0) || (strncmp(query_command, "avg(", 4) == 0) || (strncmp(query_command, "sum(", 4) == 0))
     {
         dbo = parse_math(query_command, handle, client_socket, context, send_message);
+    }
+    else if((strncmp(query_command, "add(", 4) == 0) || (strncmp(query_command, "sub(", 4) == 0))
+    {
+        dbo = parse_addsub(query_command, handle, client_socket, context, send_message);
     }
     else
     {

@@ -156,6 +156,8 @@ LoadFile* loadfile_ptr = lf;
 
                 if(strcmp(result, "shutdown") == 0)
                 {
+                    close(client_socket);
+                    //return 1;
                     exit(1);
                 }
             }
@@ -164,6 +166,7 @@ LoadFile* loadfile_ptr = lf;
 
     log_info("Connection closed at socket %d!\n", client_socket);
     close(client_socket);
+    //return 0;
 }
 
 /**
@@ -217,6 +220,7 @@ int setup_server() {
 // and remain running until it receives a shut-down command.
 int main(void)
 {
+    int pid;
     int server_socket = setup_server();
     if (server_socket < 0) {
         exit(1);
@@ -228,13 +232,35 @@ int main(void)
     socklen_t t = sizeof(remote);
     int client_socket = 0;
 
-    if ((client_socket = accept(server_socket, (struct sockaddr *)&remote, &t)) == -1) {
-        log_err("L%d: Failed to accept a new connection.\n", __LINE__);
-        exit(1);
+    while(1)
+    {
+        if ((client_socket = accept(server_socket, (struct sockaddr *)&remote, &t)) == -1)
+        {
+            log_err("L%d: Failed to accept a new connection.\n", __LINE__);
+            exit(1);
+        }
+
+        /*pid = fork();
+        if(pid < 0)
+        {
+            perror("ERROR on fork");
+            exit(1);
+        }
+        if(pid == 0)
+        {
+            close(server_socket);
+            handle_client(client_socket);
+            exit(0);
+        }
+        else
+        {
+            close(client_socket);
+        }*/
+
+        handle_client(client_socket);
+
     }
-
-    handle_client(client_socket);
-
+    //handle_client(client_socket);
     return 0;
 }
 

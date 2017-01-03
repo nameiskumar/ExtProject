@@ -249,7 +249,8 @@ typedef enum OperatorType {
     PRINT,
     SHUTDOWN,
     MATH,
-    ADDSUB
+    ADDSUB,
+    SELECT2
 } OperatorType;
 
 typedef enum MathOperatorType

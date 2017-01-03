@@ -100,6 +100,7 @@ char* execute_DbOperator(DbOperator* query)
     Column* col_ptr;
     message_status status;
     Comparator* comp;
+    Comparator* s2_comp;
 
     VariablePool* var_pool_ptr;
     char* str_res = malloc(sizeof(char) * MAX_STRING_SIZE);
@@ -227,7 +228,7 @@ Column *column_ptr = (current_db->tables)->columns;
 
             Result* fetch_res = malloc(sizeof(Result));
             fetch_res->data_type = INT;
-            fetch_res->payload = (int* )malloc(sizeof(int) * res->num_tuples);
+            fetch_res->payload = (int* )malloc(sizeof(int) * 2 * res->num_tuples);
             int* fetch_pl_ptr = fetch_res->payload;
             int* res_pl_ss = res->payload;
             fetch_res->num_tuples = res->num_tuples;
@@ -235,6 +236,7 @@ Column *column_ptr = (current_db->tables)->columns;
             for(size_t i = 0; i < res->num_tuples; i++)
             {
                 fetch_pl_ptr[i] = col_ptr->data[res_pl_ss[i]];
+                fetch_pl_ptr[i+res->num_tuples] = res_pl_ss[i];
             }
 
             chandle_table_ptr_fetch = (query->context)->chandle_table;
@@ -279,8 +281,8 @@ Column *column_ptr = (current_db->tables)->columns;
             }
 
             //Output formatting
-            GeneralizedColumnHandle* colhandle_table_ptr = (query->context)->chandle_table;
-            Result* result_ptr = chandle_table_ptr->generalized_column.column_pointer.result;
+            //GeneralizedColumnHandle* colhandle_table_ptr = (query->context)->chandle_table;
+            //Result* result_ptr = chandle_table_ptr->generalized_column.column_pointer.result;
             int count = query->operator_fields.print_operator.var_pool->num_tuples;
 
                 for(int i = 0; i < count; i++)
@@ -304,7 +306,7 @@ Column *column_ptr = (current_db->tables)->columns;
                             strcat(str_res, str_payload);
                         }
 
-                        var_pool_ptr++;
+                        //var_pool_ptr++;
                         if(j < query->operator_fields.print_operator.var_count - 1)
                         {
                             strcat(str_res, ",");
@@ -416,7 +418,7 @@ Column *column_ptr = (current_db->tables)->columns;
 
             return "Get the min value after issuing print command";
 
-        case 9 ://max operations
+        case 9 ://addsub operations
             addsub_res = malloc(sizeof(Result));
             addsub_res->num_tuples = query->operator_fields.addsub_operator.num_tuples;
             addsub_res->payload = (int *) malloc(sizeof(int) * addsub_res->num_tuples);
@@ -451,6 +453,35 @@ Column *column_ptr = (current_db->tables)->columns;
             chandle_table_ptr_addsub->generalized_column.column_pointer.result->data_type = INT;
 
             return "Get the min value after issuing print command";
+
+        case 10 : //select type2
+            s2_comp = query->operator_fields.select_operator.comparator;
+            GeneralizedColumnHandle* s2_chandle_table_ptr = (query->context)->chandle_table;
+            Result* s2_operand_ptr = (s2_comp->gen_col)->column_pointer.result;
+            int* s2_opr_pl = s2_operand_ptr->payload;
+
+            Result* s2_res_ptr = (Result* )malloc(sizeof(Result));
+            s2_res_ptr->data_type = INT;
+            s2_res_ptr->num_tuples = 0;
+            s2_res_ptr->payload = (int* )malloc(sizeof(int) * s2_operand_ptr->num_tuples);
+            int* s2_pl_ptr = s2_res_ptr->payload;
+
+            for (size_t i = 0; i < s2_operand_ptr->num_tuples; i++)
+            {
+                if(s2_opr_pl[i] < s2_comp->p_high && s2_opr_pl[i] >= s2_comp->p_low)
+                {
+                    s2_pl_ptr[s2_res_ptr->num_tuples] = s2_opr_pl[i+(s2_operand_ptr->num_tuples)];
+                    s2_res_ptr->num_tuples++;
+                }
+            }
+
+            for(int i = 0; i <  ((query->context)->chandles_in_use - 1); i++)
+            {
+                s2_chandle_table_ptr++;
+            }
+
+            s2_chandle_table_ptr->generalized_column.column_pointer.result = s2_res_ptr;
+            s2_chandle_table_ptr->generalized_column.column_pointer.result->data_type = INT;
 
         default : //EVERYTHING ELSE
             return "Hello 165";

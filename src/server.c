@@ -50,10 +50,10 @@ void init_client_context(ClientContext* client_context)
  * This is the execution routine after a client has connected.
  * It will continually listen for messages from the client and execute queries.
  **/
-void handle_client(int client_socket) {
+int handle_client(int client_socket) {
     int done = 0;
     int length = 0;
-
+    int shutdown = 0;
     log_info("Connected to socket: %d.\n", client_socket);
 
     // Create two messages, one from which to read and one from which to receive
@@ -92,8 +92,8 @@ LoadFile* loadfile_ptr = lf;
 
         else if (length == 0)
         {
-            //done = 1;
-            continue;
+            done = 1;
+            //continue;
         }
         if (!done)
         {
@@ -103,6 +103,9 @@ LoadFile* loadfile_ptr = lf;
             recv_message.payload[recv_message.length] = '\0';
 
             char* result;
+
+            /*if(strncmp(recv_message.payload, "shutdown", 8) == 0)
+                shutdown = 1;*/
 
             if(strncmp(recv_message.payload, "load", 4) == 0)
             {
@@ -157,8 +160,9 @@ LoadFile* loadfile_ptr = lf;
                 if(strcmp(result, "shutdown") == 0)
                 {
                     close(client_socket);
-                    //return 1;
-                    exit(1);
+                    shutdown = 1;
+                    done = 1;
+                    return shutdown;
                 }
             }
         }
@@ -166,7 +170,7 @@ LoadFile* loadfile_ptr = lf;
 
     log_info("Connection closed at socket %d!\n", client_socket);
     close(client_socket);
-    //return 0;
+    return shutdown;
 }
 
 /**
@@ -231,8 +235,8 @@ int main(void)
     struct sockaddr_un remote;
     socklen_t t = sizeof(remote);
     int client_socket = 0;
-
-    while(1)
+    int shutdown = 0;
+    while(shutdown == 0)
     {
         if ((client_socket = accept(server_socket, (struct sockaddr *)&remote, &t)) == -1)
         {
@@ -240,7 +244,7 @@ int main(void)
             exit(1);
         }
 
-        pid = fork();
+        /*pid = fork();
         if(pid < 0)
         {
             perror("ERROR on fork");
@@ -255,9 +259,9 @@ int main(void)
         else
         {
             close(client_socket);
-        }
+        }*/
     
-       // handle_client(client_socket);
+        shutdown = handle_client(client_socket);
     }
     return 0;
 }

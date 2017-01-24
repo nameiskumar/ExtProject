@@ -7,32 +7,14 @@
 #define MAX_TABLE_CAP 10
 #define DEFAULT_QUERY_BUFFER_SIZE 1024
 #define MAX_STRING_SIZE 1024
+#define PG_SZ 16384
 
-//static_assert(sizeof(float) == sizeof(void *));
-
-//#define MAX_TABLE_LENGTH 2
-// In this class, there will always be only one active database at a time
 Db *current_db;
-/*char* next_dot_token(char** tokenizer, message_status* status)
-{
-    char* token = strsep(tokenizer, ".");
-    if (token == NULL)
-    {
-        *status= INCORRECT_FORMAT;
-    }
-    return token;
-}*/
 
 Table* lookup(const char* tbl_name)
 {
-//Debug
-//printf("********in lookup fn\n");
-//printf("the value of table in lookup fn is ***%s\n", tbl_name);
-
     Table* table_ptr = current_db->tables;
     size_t count = 0;
-//Debug
-//printf("inside lookup the value of table_ptr->name and tbl_name is %s%s****** \n", table_ptr->name,tbl_name);
     while(strcmp(table_ptr->name,tbl_name) != 0)
     {
         count++;
@@ -75,8 +57,6 @@ Column* col_lookup(const char* col_name)
 
 }
 
-//#define DEFAULT_QUERY_BUFFER_SIZE 1024
-
 /** execute_DbOperator takes as input the DbOperator and executes the query.
  * This should be replaced in your implementation (and its implementation possibly moved to a different file).
  * It is currently here so that you can verify that your server and client can send messages.
@@ -84,8 +64,6 @@ Column* col_lookup(const char* col_name)
 
 char* execute_DbOperator(DbOperator* query)
 {
-    //printf("%d",query->client_fd);
-//debug line
     if(query == NULL)
     {
         return "This is either a comment or an unsupported query";
@@ -121,10 +99,6 @@ char* execute_DbOperator(DbOperator* query)
         case 0 : //CREATE Queries
             return "This is a Create query! Cant return results on this";
         case 1 : //INSERT QUERIES
-//Debug
-for (size_t i = 0; i < (current_db->tables)->col_count; i++)
-//printf("The values to be inserted is %d\n", query->operator_fields.insert_operator.values[i]);
-//printf("%d\n", query->operator_fields.insert_operator.values[1]);           
             col_ptr = (query->operator_fields.insert_operator.table)->columns;
             table_ptr = query->operator_fields.insert_operator.table;
 
@@ -158,13 +132,11 @@ for (size_t i = 0; i < (current_db->tables)->col_count; i++)
             {
                 (col_ptr)->data[table_ptr->data_pos] = query->operator_fields.insert_operator.values[j];
                 col_ptr++;
-
+            }
+            (table_ptr->data_pos)++;
 //Debug
 //printf("data position value %d \n", (table_ptr->data_pos));
 //printf("value inserted at this point is %d \n", (col_ptr)->data[table_ptr->data_pos]);
-            }
-
-            (table_ptr->data_pos)++;
 Column *column_ptr = (current_db->tables)->columns;
 
             return "Data inserted successfully";
@@ -486,6 +458,53 @@ Column *column_ptr = (current_db->tables)->columns;
         default : //EVERYTHING ELSE
             return "Hello 165";
     }
+
+        /*case 11 : //join
+            JoinOperatorType join_op_type = query->operator_fields.join_operator.type;
+            GeneralizedColumnHandle* chandle_table_ptr_join = (query->context)->chandle_table;
+            char* join_left_name = malloc(sizeof(char)*HANDLE_MAX_SIZE);
+            char* join_right_name = malloc(sizeof(char)*HANDLE_MAX_SIZE);
+            char* select1 = malloc(sizeof(char)*HANDLE_MAX_SIZE);
+            char* select2 = malloc(sizeof(char)*HANDLE_MAX_SIZE);
+            char* fetch1 = malloc(sizeof(char)*HANDLE_MAX_SIZE);
+            char* fetch2 = malloc(sizeof(char)*HANDLE_MAX_SIZE);
+            strcpy(join_left_name, query->operator_fields.join_operator.name_left);
+            strcpy(join_right_name, query->operator_fields.join_operator.name_right);
+            strcpy(select1, query->operator_fields.join_operator.select_handle1);
+            strcpy(select2, query->operator_fields.join_operator.select_handle2);
+            strcpy(fetch1, query->operator_fields.join_operator.fetch_handle1);
+            strcpy(fetch2, query->operator_fields.join_operator.fetch_handle2);
+            int join_tuples_num = query->operator_fields.join_operator.num_tuples;
+            Result *res_fetch1, *res_fetch2, *res_select1, *res_select2;
+            Result* join_res1 = malloc(sizeof(Result));
+            Result* join_res2 = malloc(sizeof(Result));
+            join_res1->payload = (int* )malloc(sizeof(int)*join_tuples_num);
+            join_res2->payload = (int* )malloc(sizeof(int)*join_tuples_num);
+            int* join_pl_ptr1 = join_res1->payload;
+            int* join_pl_ptr2 = join_res2->payload;
+
+            if(join_op_type == 0)
+            {
+                for(int i = 0; i < (query->context)->chandles_in_use; i++)
+                {
+                    if(strcmp(select1, chandle_table_ptr_join->name) == 0)
+                        res_select1 = chandle_table_ptr_join->generalized_column.column_pointer.result;
+                    if(strcmp(select2, chandle_table_ptr_join->name) == 0)
+                        res_select2 = chandle_table_ptr_join->generalized_column.column_pointer.result;
+                    if(strcmp(fetch1, chandle_table_ptr_join->name) == 0)
+                        res_fetch1 = chandle_table_ptr_join->generalized_column.column_pointer.result;
+                    if(strcmp(fetch2, chandle_table_ptr_join->name) == 0)
+                        res_fetch2 = chandle_table_ptr_join->generalized_column.column_pointer.result;
+
+                    chandle_table_ptr_join++;
+                }
+                size_t incr = PAGE_SZ/sizeof(int);
+            }*/
+
+
+
+
+
 }
 
 
@@ -532,19 +551,17 @@ Column* create_column(const char* column_name, char* table_name, bool sorted, St
 
     strcpy(col_ptr->name,column_name);
     col_ptr->data = NULL;
-    
-    ret_status->code = OK;
 
-    //printf("$$$$$$$$$$$$$$$$$$$printing col_ptr before returning$$$$$$$$$$\n");
-    //printf("col_ptr is %u\n",col_ptr);
-    //printf("$$$$$$$$$$$$$$$$$$$printing col_ptr->name$$$$$$$$$$$$$$$$%s\n",col_ptr->name);
-    //printf("$$$$$$$$$$$$$$$$$$$printing col_name$$$$$$$$$$$$$$$$%s\n",column_name);
+    //Index params setter
+    //col_ptr->index = NULL;
+
+    ret_status->code = OK;
 
     return col_ptr;
 }
 
 
-Table* create_table(Db* db, const char* name, size_t num_columns, Status *ret_status) 
+Table* create_table(Db* db, const char* name, size_t num_columns, Status *ret_status)
 {
 //Debug line
 //printf("Entering create table fn \n");
@@ -558,8 +575,6 @@ Table* create_table(Db* db, const char* name, size_t num_columns, Status *ret_st
         return NULL;
     }
 
-//Debug line
-//printf("Inside create table fn beyong NULL \n");
     db->tables_size++;
 
     if(db->tables == NULL)
@@ -583,13 +598,10 @@ Table* create_table(Db* db, const char* name, size_t num_columns, Status *ret_st
 
     db->tables_capacity--;
 
+    //Index Params
+    table_ptr->index_count = 0;
+
     ret_status->code=OK;
-
-//Debug line
-//printf("Table name is %s \n",table_ptr->name);
-//printf("Table columns are %zu \n",table_ptr->col_count);
-
-	//return db->tables;
     return table_ptr;
 }
 
@@ -902,7 +914,6 @@ void load_insert(DbOperator* dbo, message* send_message, LoadFile* lf_ptr)
     char* table_name = next_dot_token(handle_index, &mes_status);
 
     Table* insert_table = lookup(table_name);
-    //Column* col = insert_table->columns;
     lf_ptr++; //lf[2] is where the actual data starts    
 
     char* token = NULL;
@@ -910,7 +921,6 @@ void load_insert(DbOperator* dbo, message* send_message, LoadFile* lf_ptr)
     dbo->type = INSERT;
     dbo->operator_fields.insert_operator.table = insert_table;
     dbo->operator_fields.insert_operator.values = malloc(sizeof(int) * insert_table->col_count);
-    //int columns_inserted = 0;
     char* result;
     char** command_index = NULL;
 
@@ -920,13 +930,8 @@ void load_insert(DbOperator* dbo, message* send_message, LoadFile* lf_ptr)
         command_index = &(lf_ptr->element);
         size_t columns_inserted = 0;
 
-        //get rid of load keyword
-        //token = token + 4;
-
         while ((token = strsep(command_index, ",")) != NULL)
         {
-            //get rid of load keyword
-            //token = token + 4;
             int insert_val = atoi(token);
             dbo->operator_fields.insert_operator.values[columns_inserted] = insert_val;
             columns_inserted++;
@@ -940,6 +945,6 @@ void load_insert(DbOperator* dbo, message* send_message, LoadFile* lf_ptr)
         result = execute_DbOperator(dbo);
         lf_ptr++;
     }
-
+    bulk_load(insert_table);
 }
 

@@ -76,15 +76,50 @@ typedef enum DataType {
      FLOAT
 } DataType;
 
-struct Comparator;
+//struct Comparator;
 //struct ColumnIndex;
 
+typedef enum IndexType
+{
+    NONE,
+    BTREE_CLUSTERED,
+    BTREE_UNCLUSTERED,
+    SORTED_CLUSTERED,
+    SORTED_UNCLUSTERED
+} IndexType;
+
+typedef struct BTNode
+{
+} BTNode;
+
+
+typedef struct BTree
+{
+    struct BTNode* root;
+    struct BTNode* last_node;
+    struct Table* tbl;
+    struct Column* col;
+} BTree;
+
+/**
+ * Added to track the Clumn Indices
+ * index pointer will point to the Btree struct for tree indices
+ * and the first element of the array for sorted indices
+ * priority nbr starts from 1 onward with1 being max priority
+ **/
+typedef struct ColumnIndex
+{
+    IndexType type;
+    void* index;
+    //size_t priority_nbr;
+} ColumnIndex;
+
 typedef struct Column {
-    char name[MAX_SIZE_NAME]; 
+    char name[MAX_SIZE_NAME];
     int* data;
     // You will implement column indexes later. 
-    void* index;
-    //struct ColumnIndex *index;
+    //void* index;
+    struct ColumnIndex* index;
     //bool clustered;
 } Column;
 
@@ -121,6 +156,9 @@ typedef struct Table {
     size_t table_length;
     size_t columns_size;
     size_t data_pos;
+    //Will store the array of col ptr that are indices
+    Column** index_priority;
+    int index_count;
 } Table;
 
 /**
@@ -250,7 +288,8 @@ typedef enum OperatorType {
     SHUTDOWN,
     MATH,
     ADDSUB,
-    SELECT2
+    SELECT2,
+    JOIN
 } OperatorType;
 
 typedef enum MathOperatorType
@@ -336,6 +375,23 @@ typedef struct MathOperator
     int num_tuples;
 } MathOperator;
 
+typedef enum JoinOperatorType
+{
+    NESTED_LOOP,
+    HASH
+} JoinOperatorType;
+
+typedef struct JoinOperator
+{
+    JoinOperatorType type;
+    char name_left[HANDLE_MAX_SIZE];
+    char name_right[HANDLE_MAX_SIZE];
+    char select_handle1[HANDLE_MAX_SIZE];
+    char select_handle2[HANDLE_MAX_SIZE];
+    char fetch_handle1[HANDLE_MAX_SIZE];
+    char fetch_handle2[HANDLE_MAX_SIZE];
+    int num_tuples;
+} JoinOperator;
 
 /*
  * union type holding the fields of any operator
@@ -350,6 +406,7 @@ typedef union OperatorFields {
     PrintOperator print_operator;
     MathOperator math_operator;
     AddSubOperator addsub_operator;
+    JoinOperator join_operator;
 } OperatorFields;
 /*
  * DbOperator holds the following fields:
@@ -400,6 +457,11 @@ void db_operator_free(DbOperator* query);
 
 void load_insert(DbOperator* dbo, message* send_message, LoadFile* loadfile_ptr);
 Table*  lookup(const char* table_name);
+
+void bulk_load(Table* );
+void load_sorted_cluster(Table* , Column* );
+void quickSort( int[], int[], int , int );
+int partition( int[], int[], int, int);
 
 #endif /* CS165_H */
 

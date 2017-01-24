@@ -240,7 +240,7 @@ int main(void)
             exit(1);
         }
 
-        /*pid = fork();
+        pid = fork();
         if(pid < 0)
         {
             perror("ERROR on fork");
@@ -255,12 +255,10 @@ int main(void)
         else
         {
             close(client_socket);
-        }*/
-
-        handle_client(client_socket);
-
+        }
+    
+       // handle_client(client_socket);
     }
-    //handle_client(client_socket);
     return 0;
 }
 

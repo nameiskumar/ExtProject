@@ -178,15 +178,11 @@ message_status parse_create_db(char* create_arguments) {
     char *token;
     token = strsep(&create_arguments, ",");
     if (token == NULL) {
-        return INCORRECT_FORMAT;                    
+        return INCORRECT_FORMAT;
     } else {
         // create the database with given name
         char* db_name = token;
-//Debug line
-//printf("db name before trimming is %s \n", db_name);
         db_name = trim_quotes(db_name);
-//Debug line
-//printf("db name after trimming is %s \n", db_name);
         int last_char = strlen(db_name) - 1;
         if (last_char < 0 || db_name[last_char] != ')') {
             return INCORRECT_FORMAT;
@@ -196,14 +192,55 @@ message_status parse_create_db(char* create_arguments) {
         if (token != NULL) {
             return INCORRECT_FORMAT;
         }
-//Debug line
-//printf("db name inside parse_create_db before calling add_db fn is %s \n", db_name);
         if (add_db(db_name, true).code == OK) {
             return OK_DONE;
         } else {
             return EXECUTION_ERROR;
         }
     }
+}
+
+message_status parse_create_index(char* create_arguments)
+{
+    char *token;
+    token = strsep(&create_arguments, ",");
+    if (token == NULL)
+    {
+        return INCORRECT_FORMAT;
+    }
+    else
+    {
+        char* db_object = token;
+        char* db_name = strsep(&db_object, ".");
+        char* tbl_name = strsep(&db_object, ".");
+        char* col_name = db_object;
+
+        Table* tbl_ptr = lookup(tbl_name);
+        Column* col_ptr = tbl_ptr->columns;
+        while((strcmp(col_ptr->name, col_name) != 0))
+            col_ptr++;
+
+        tbl_ptr->index_priority = (Column** )malloc(sizeof(Column*) * tbl_ptr->col_count);
+        col_ptr->index = (ColumnIndex* )malloc(sizeof(ColumnIndex));
+
+        char* index_param1 = strsep(&create_arguments, ",");
+        char* index_param2 = create_arguments;
+        int last_char = strlen(index_param2) - 1;
+        index_param2[last_char] = '\0';
+
+        if (strcmp(index_param1, "btree") == 0 && strcmp(index_param2, "clustered") == 0)
+            col_ptr->index->type = BTREE_CLUSTERED;
+        else if (strcmp(index_param1, "btree") == 0 && strcmp(index_param2, "unclustered") == 0)
+            col_ptr->index->type = BTREE_UNCLUSTERED;
+        else if (strcmp(index_param1, "sorted") == 0 && strcmp(index_param2, "clustered") == 0)
+            col_ptr->index->type = SORTED_CLUSTERED;
+        else if (strcmp(index_param1, "sorted") == 0 && strcmp(index_param2, "unclustered") == 0)
+            col_ptr->index->type = SORTED_UNCLUSTERED;
+
+        tbl_ptr->index_priority[tbl_ptr->index_count] = col_ptr;
+        tbl_ptr->index_count++;
+    }
+    return OK_DONE;
 }
 
 /**
@@ -226,17 +263,15 @@ message_status parse_create(char* create_arguments) {
             return INCORRECT_FORMAT;
         } else {
             if (strcmp(token, "db") == 0) {
-//Debug line
-//printf("inside parse_create fn where token = db \n");
                 mes_status = parse_create_db(tokenizer_copy);
             } else if (strcmp(token, "tbl") == 0) {
-//Debug line
-//printf("inside parse_create fn where token = tbl \n");
-//printf("the value of tokenizer copy is %s",tokenizer_copy);
                 mes_status = parse_create_tbl(tokenizer_copy);
             }
              else if (strcmp(token, "col") == 0) {
                 mes_status = parse_create_col(tokenizer_copy);
+            }
+             else if (strcmp(token, "idx") == 0) {
+                mes_status = parse_create_index(tokenizer_copy);
             }
              else {
                 mes_status = UNKNOWN_COMMAND;
@@ -619,6 +654,77 @@ DbOperator* parse_fetch(char* query_command, char* handle, int client_socket, Cl
 
 return dbo;
 
+}
+
+
+DbOperator* parse_join(char* query_command, char* handle, int client_socket, ClientContext* context, message* send_message)
+{
+    send_message->status = OK_DONE;
+
+    if(strncmp(query_command, "(", 1) == 0)
+    {
+        query_command++;
+    }
+
+    query_command = trim_newline(query_command);
+    query_command = trim_whitespace(query_command);
+    handle = trim_whitespace(handle);
+    char** handle_index = &handle;
+    char* handle_left = next_token(handle_index, &send_message->status);
+    char* handle_right = handle;
+
+    int last_char = strlen(query_command) - 1;
+
+    if (query_command[last_char] != ')')
+    {
+        printf("INCORRECT_FORMAT");
+        send_message->status = UNKNOWN_COMMAND;
+        return NULL;
+    }
+    query_command[last_char] = '\0';
+
+    char** command_index = &query_command;
+    char* fetch_obj1 = next_token(command_index, &send_message->status);
+    char* select_obj1 = next_token(command_index, &send_message->status);
+    char* fetch_obj2 = next_token(command_index, &send_message->status);
+    char* select_obj2 = next_token(command_index, &send_message->status);
+    char* join_type = query_command;
+
+    DbOperator* dbo = malloc(sizeof(DbOperator));
+    dbo->type = JOIN;
+
+    strcpy(dbo->operator_fields.join_operator.name_left, handle_left);
+    strcpy(dbo->operator_fields.join_operator.name_right, handle_right);
+    strcpy(dbo->operator_fields.join_operator.select_handle1, select_obj1);
+    strcpy(dbo->operator_fields.join_operator.select_handle2, select_obj2);
+    strcpy(dbo->operator_fields.join_operator.fetch_handle1, fetch_obj1);
+    strcpy(dbo->operator_fields.join_operator.fetch_handle2, fetch_obj2);
+
+    if(strcmp(join_type, "hash") == 0)
+        dbo->operator_fields.join_operator.type = HASH;
+    else
+        dbo->operator_fields.join_operator.type = NESTED_LOOP;
+
+    dbo->operator_fields.join_operator.num_tuples = 0;
+
+    ClientContext* client_context = context;
+    GeneralizedColumnHandle* chandle_table_ptr = client_context->chandle_table;
+
+    int i = 0;
+    while(i != client_context->chandles_in_use)
+    {
+        chandle_table_ptr++;
+        i++;
+    }
+
+    strcpy((chandle_table_ptr)->name, handle_left);
+    chandle_table_ptr++;
+    strcpy((chandle_table_ptr)->name, handle_right);
+    client_context->chandles_in_use += 2;
+
+    dbo->context = client_context;
+
+return dbo;
 }
 
 DbOperator* parse_select2(char* query_command, char* handle, int client_socket, ClientContext* context, message* send_message)
